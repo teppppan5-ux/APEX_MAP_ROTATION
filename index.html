@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -54,10 +54,20 @@
 
     @media (max-width: 860px) {
         .main-layout {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 24px;
         }
-        .col-left {
+        .col-left, .col-right {
             position: static;
+            min-width: 0;
+            width: 100%;
+        }
+        .col-left .toolbar {
+            position: static !important;
+            margin-bottom: 16px !important;
+        }
+        #tabsToolbar {
+            top: 12px !important;
         }
     }
     
@@ -146,7 +156,8 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        word-break: keep-all;
+        flex-wrap: wrap;
+        word-break: break-word;
     }
 
     .hero-time {
@@ -226,6 +237,7 @@
         align-items: center;
         gap: 8px;
         width: 100%;
+        min-width: 0;
     }
     
     .date-tabs-wrapper {
@@ -413,12 +425,15 @@
         display: flex;
         align-items: center;
         gap: 20px;
+        min-width: 0;
     }
 
     .card-content {
         display: flex;
         flex-direction: column;
         gap: 6px;
+        min-width: 0;
+        width: 100%;
     }
 
     .card-icon {
@@ -485,16 +500,40 @@
 
     @media (max-width: 640px) {
         .container {
-            padding: 18px 14px 90px;
+            padding: 16px 12px 80px;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
         }
 
         .hero {
-            padding: 22px;
-            border-radius: 18px;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: clamp(1.5rem, 7vw, 2rem);
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hero-countdown {
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 10px;
+            margin-bottom: 20px;
         }
 
         .toolbar {
-            padding: 10px;
+            padding: 12px;
+            border-radius: 16px;
         }
 
         .toolbar-row {
@@ -502,41 +541,81 @@
             align-items: stretch;
         }
 
+        /* 日付タブのスワイプ最適化 */
+        #scrollLeftBtn, #scrollRightBtn {
+            display: none;
+        }
+
+        .date-tabs-container {
+            gap: 6px;
+        }
+
+        .date-tabs-wrapper {
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .date-tab {
+            min-width: 64px;
+            padding: 6px 8px;
+            font-size: 0.9rem;
+        }
+
+        .calendar-picker-wrapper .scroll-btn {
+            display: flex;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+        }
+
+        /* タイムラインのカード最適化 */
         .card {
             align-items: flex-start;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 16px;
+        }
+
+        .card.is-current {
+            padding-left: 16px;
+            border-left-width: 6px;
         }
 
         .card-body {
             width: 100%;
             gap: 12px;
+            align-items: center;
+            flex-direction: row;
         }
 
         .card-time {
-            min-width: auto;
-            font-size: 0.9rem;
-            display: inline-block;
+            width: auto;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
             padding: 4px 10px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+        }
+
+        .card.is-current .card-time {
+            background: var(--danger-bg);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: var(--danger);
         }
 
         .card-icon {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
         }
 
         .card-name {
-            font-size: 1.05rem;
+            font-size: 1.15rem;
         }
 
-        .hero-title {
-            font-size: clamp(1.8rem, 8vw, 2.4rem);
-        }
-
-        .hero-countdown {
-            width: 100%;
-            text-align: center;
-            font-size: 1.3rem;
-            padding: 10px;
+        .now-badge {
+            font-size: 0.7rem;
+            padding: 4px 8px;
         }
     }
 </style>
