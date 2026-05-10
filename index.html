@@ -204,7 +204,7 @@
         color: var(--text-muted);
         border-top: 1px solid var(--border-dark);
         padding-top: 20px;
-        word-break: keep-all;
+        word-break: break-word;
         line-height: 1.4;
     }
 
@@ -238,6 +238,7 @@
         gap: 8px;
         width: 100%;
         min-width: 0;
+        max-width: 100%;
     }
     
     .date-tabs-wrapper {
@@ -251,6 +252,7 @@
         /* Flex box to ensure it doesn't grow indefinitely */
         display: flex;
         min-width: 0;
+        max-width: 100%;
     }
 
     .date-tabs {
@@ -591,6 +593,7 @@
 
         .card-time {
             width: auto;
+            min-width: auto;
             text-align: left;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
@@ -1018,7 +1021,7 @@ function renderList(targetDate) {
         const brandColor = getMapBrandColor(m.mapName);
         const bgStyle = brandColor ? `background-color: ${brandColor}; border-color: ${brandColor};` : '';
 
-        card.style = `${opacityStyle} ${transformStyle} ${isCurrent ? '' : bgStyle}`;
+        card.setAttribute('style', `${opacityStyle} ${transformStyle} ${isCurrent ? '' : bgStyle}`);
 
         let timeText = `${formatTime(m.start)} – ${formatTime(m.end)}`;
         if (isFiltering) {
