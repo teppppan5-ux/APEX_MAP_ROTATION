@@ -361,6 +361,8 @@
         gap: 16px;
         max-height: calc(100vh - 200px);
         overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
         padding-right: 8px; /* スクロールバーのための余白 */
         position: relative;
     }
@@ -1198,7 +1200,8 @@ function checkNowBtnVisibility() {
 }
 
 document.getElementById('refreshBtn').addEventListener('click', fetchMapData);
-document.getElementById('mapFilter').addEventListener('change', () => {
+document.getElementById('mapFilter').addEventListener('change', (e) => {
+    e.target.blur();
     renderTabs();
     renderList(selectedDate);
     setTimeout(() => {
