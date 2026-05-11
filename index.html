@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apex Map Rotation</title>
+<meta name="description" content="Apex Legendsのマップローテーションスケジュールを確認できるツールです。現在のマップ、次のマップ、今後のスケジュールがわかります。">
+<meta property="og:title" content="Apex Map Rotation">
+<meta property="og:description" content="Apex Legendsのマップローテーションスケジュールを確認できるツールです。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%%22 y=%2250%%22 style=%22dominant-baseline:central;text-anchor:middle;font-size:90px;%22>🎮</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -354,6 +359,26 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        padding-right: 8px; /* スクロールバーのための余白 */
+        position: relative;
+    }
+
+    /* カスタムスクロールバー */
+    .timeline::-webkit-scrollbar {
+        width: 8px;
+    }
+    .timeline::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+    }
+    .timeline::-webkit-scrollbar-thumb {
+        background: var(--border-dark);
+        border-radius: 4px;
+    }
+    .timeline::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
     }
 
     .card {
@@ -542,6 +567,10 @@
             flex-direction: column;
             align-items: stretch;
         }
+        
+        .timeline {
+            max-height: 60vh;
+        }
 
         /* 日付タブのスワイプ最適化 */
         #scrollLeftBtn, #scrollRightBtn {
@@ -723,8 +752,11 @@ function parseCSV(csv) {
     for (let i = 1; i < lines.length; i++) {
         const row = lines[i].split(',');
         if (row.length >= 5) {
-            const start = new Date(row[0]);
-            const end = new Date(row[1]);
+            // Safari等でのDateパースエラーを防ぐため、ハイフンをスラッシュに置換
+            const startStr = row[0].replace(/-/g, '/');
+            const endStr = row[1].replace(/-/g, '/');
+            const start = new Date(startStr);
+            const end = new Date(endStr);
             const mapName = row[4].trim();
             if (!isNaN(start) && !isNaN(end) && mapName) {
                 result.push({ start, end, mapName });
@@ -783,7 +815,11 @@ async function fetchMapData() {
         updateHero();
         renderList(selectedDate);
         
-        setTimeout(scrollToCurrent, 300);
+        setTimeout(() => {
+            window.scrollTo(0, 0); // ページ全体はトップにフォーカス
+            scrollToCurrent();     // リスト内は現在のマップへスクロール
+            if (typeof checkNowBtnVisibility === 'function') checkNowBtnVisibility();
+        }, 300);
 
     } catch(err) {
         document.getElementById('currentMapName').innerText = 'Error';
@@ -929,7 +965,10 @@ function renderTabs() {
             selectedDate = dObj;
             renderTabs();
             renderList(selectedDate);
-            setTimeout(scrollToCurrent, 50);
+            setTimeout(() => {
+                scrollToCurrent();
+                if (typeof checkNowBtnVisibility === 'function') checkNowBtnVisibility();
+            }, 50);
         });
         container.appendChild(btn);
     });
@@ -953,6 +992,10 @@ document.getElementById('datePicker').addEventListener('change', (e) => {
     
     renderTabs();
     renderList(selectedDate);
+    setTimeout(() => {
+        scrollToCurrent();
+        if (typeof checkNowBtnVisibility === 'function') checkNowBtnVisibility();
+    }, 50);
 });
 
 // ==========================================
@@ -1024,27 +1067,48 @@ function renderList(targetDate) {
         card.setAttribute('style', `${opacityStyle} ${transformStyle} ${isCurrent ? '' : bgStyle}`);
 
         let timeText = `${formatTime(m.start)} – ${formatTime(m.end)}`;
+        
         if (isFiltering) {
+            // フィルタ時はマップ名等を省き、スケジュール表のようにシンプルにする
             const mMonth = m.start.getMonth() + 1;
             const mDate = m.start.getDate();
-            timeText = `${mMonth}/${mDate} ${timeText}`;
-        }
-
-        card.innerHTML = `
-            <div class="card-time">
-                ${timeText}
-            </div>
-            <div class="card-body">
-                <span class="card-icon">${meta.icon}</span>
-                <div class="card-content" style="width: 100%;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="card-name">${m.mapName}</span>
-                        ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
+            const dayNames = ['日','月','火','水','木','金','土'];
+            const dayStr = dayNames[m.start.getDay()];
+            timeText = `${mMonth}/${mDate}(${dayStr}) ${timeText}`;
+            
+            card.style.padding = "16px 20px";
+            card.style.flexDirection = "column";
+            card.style.alignItems = "stretch";
+            card.style.gap = "0";
+            
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 12px;">
+                        <span style="color: var(--text-muted);">📅</span>
+                        <span>${timeText}</span>
                     </div>
-                    ${progressHtml}
+                    ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
                 </div>
-            </div>
-        `;
+                ${progressHtml ? `<div style="width: 100%; margin-top: 12px;">${progressHtml}</div>` : ''}
+            `;
+        } else {
+            card.innerHTML = `
+                <div class="card-time">
+                    ${timeText}
+                </div>
+                <div class="card-body">
+                    <span class="card-icon">${meta.icon}</span>
+                    <div class="card-content" style="width: 100%;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="card-name">${m.mapName}</span>
+                            ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
+                        </div>
+                        ${progressHtml}
+                    </div>
+                </div>
+            `;
+        }
+        
         card.setAttribute('data-start', m.start.getTime());
         container.appendChild(card);
     });
@@ -1069,9 +1133,11 @@ function getMapBrandColor(mapName, isGradient=false) {
 
 function scrollToCurrent() {
     const el = document.querySelector('.card.is-current');
-    if(el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 160;
-        window.scrollTo({ top: y, behavior: 'smooth' });
+    const container = document.getElementById('resultList');
+    if(el && container) {
+        // リスト枠内でのスクロールに変更
+        const y = el.offsetTop - 20;
+        container.scrollTo({ top: y, behavior: 'smooth' });
     }
 }
 
@@ -1093,22 +1159,67 @@ function updateMapFilterOptions() {
     }
 }
 
+function checkNowBtnVisibility() {
+    const btn = document.getElementById('backToNowBtn');
+    if (!btn) return;
+
+    const list = document.getElementById('resultList');
+    const filterVal = document.getElementById('mapFilter').value;
+    const isNotToday = selectedDate.toDateString() !== new Date().toDateString();
+    
+    let needsNowBtn = false;
+
+    if (filterVal !== '' || isNotToday) {
+        // フィルターがかかっているか、今日以外を見ている場合は常に表示
+        needsNowBtn = true;
+    } else {
+        // 今日＆フィルターなしの場合、現在のカードが見えているか判定
+        const currentCard = document.querySelector('.card.is-current');
+        if (currentCard && list) {
+            const listScroll = list.scrollTop;
+            const cardTop = currentCard.offsetTop;
+            const listHeight = list.clientHeight;
+            // リストの表示領域から外れている場合 (上下のバッファを取る)
+            if (cardTop < listScroll - 100 || cardTop > listScroll + listHeight - 50) {
+                needsNowBtn = true;
+            }
+        }
+        // 画面全体が下にスクロールされている場合
+        if (window.scrollY > 400) {
+            needsNowBtn = true;
+        }
+    }
+
+    if (needsNowBtn) {
+        btn.classList.add('visible');
+    } else {
+        btn.classList.remove('visible');
+    }
+}
+
 document.getElementById('refreshBtn').addEventListener('click', fetchMapData);
 document.getElementById('mapFilter').addEventListener('change', () => {
     renderTabs();
     renderList(selectedDate);
+    setTimeout(() => {
+        scrollToCurrent();
+        checkNowBtnVisibility();
+    }, 100);
 });
 
-window.addEventListener('scroll', () => {
-    const btn = document.getElementById('backToNowBtn');
-    btn.classList.toggle('visible', window.scrollY > 400);
-});
+window.addEventListener('scroll', checkNowBtnVisibility);
+document.getElementById('resultList').addEventListener('scroll', checkNowBtnVisibility);
 
 document.getElementById('backToNowBtn').addEventListener('click', () => {
-    selectedDate = new Date();
+    document.getElementById('mapFilter').value = ''; // フィルターをリセット
+    selectedDate = new Date(); // 日付を今日にリセット
     renderTabs();
     renderList(selectedDate);
-    setTimeout(scrollToCurrent, 100);
+    setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollToCurrent();
+        checkNowBtnVisibility();
+    }, 50);
 });
 
 window.addEventListener('load', fetchMapData);
