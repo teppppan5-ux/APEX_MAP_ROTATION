@@ -571,7 +571,9 @@
         }
         
         .timeline {
-            max-height: 60vh;
+            max-height: none;
+            overflow-y: visible;
+            padding-right: 0;
         }
 
         /* 日付タブのスワイプ最適化 */
@@ -660,7 +662,7 @@
     <header class="header">
         <h1>
             Apex Map Rotation
-            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.0.6</span>
+            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.0.7</span>
         </h1>
         <div class="header-actions">
             <button id="refreshBtn" class="btn-icon" title="Reload">↻</button>
