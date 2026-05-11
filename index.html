@@ -170,6 +170,7 @@
         font-weight: 700;
         color: var(--text-muted);
         font-variant-numeric: tabular-nums;
+        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
         margin-bottom: 20px;
         letter-spacing: 0.03em;
     }
@@ -439,6 +440,7 @@
         font-weight: 700;
         color: var(--text-muted);
         font-variant-numeric: tabular-nums;
+        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
         min-width: 120px;
         background: var(--bg-sub);
         border: 1px solid var(--border);
@@ -662,7 +664,7 @@
     <header class="header">
         <h1>
             Apex Map Rotation
-            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.0.7</span>
+            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.0.8</span>
         </h1>
         <div class="header-actions">
             <button id="refreshBtn" class="btn-icon" title="Reload">↻</button>
@@ -698,6 +700,15 @@
 
         <!-- Right Column -->
         <div class="col-right">
+            <!-- Selected Map Header (Filter Active) -->
+            <section class="toolbar" id="filterHeader" style="top: 24px; display: none; margin-bottom: 16px; padding: 12px 20px;">
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 800; color: var(--text);">
+                    <span id="filterHeaderIcon" style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></span>
+                    <span id="filterHeaderName"></span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600; margin-left: auto;">のスケジュール</span>
+                </div>
+            </section>
+
             <!-- Toolbar: Tabs -->
             <section class="toolbar" id="tabsToolbar" style="top: 24px;">
                 <div class="date-tabs-container">
@@ -889,15 +900,23 @@ setInterval(updateHero, 30000);
 function renderTabs() {
     const container = document.getElementById('dateTabs');
     const tabsToolbar = document.getElementById('tabsToolbar');
+    const filterHeader = document.getElementById('filterHeader');
     
     const filterVal = document.getElementById('mapFilter').value;
     const isFiltering = filterVal !== "";
 
     if (isFiltering) {
         if (tabsToolbar) tabsToolbar.style.display = 'none';
+        if (filterHeader) {
+            filterHeader.style.display = 'flex';
+            const meta = getMapMeta(filterVal);
+            document.getElementById('filterHeaderIcon').textContent = meta.icon;
+            document.getElementById('filterHeaderName').textContent = filterVal;
+        }
         return;
     } else {
         if (tabsToolbar) tabsToolbar.style.display = 'flex';
+        if (filterHeader) filterHeader.style.display = 'none';
     }
 
     container.innerHTML = '';
@@ -1092,7 +1111,7 @@ function renderList(targetDate) {
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     <div style="font-size: 1.1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 12px;">
                         <span style="color: var(--text-muted);">📅</span>
-                        <span>${timeText}</span>
+                        <span style="font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;">${timeText}</span>
                     </div>
                     ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
                 </div>
