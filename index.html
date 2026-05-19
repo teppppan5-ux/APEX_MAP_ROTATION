@@ -153,16 +153,16 @@
     }
 
     .hero-title {
-        font-size: clamp(1.8rem, 5vw, 2.4rem);
+        font-size: clamp(1.5rem, 4vw, 1.75rem);
         font-weight: 900;
         letter-spacing: -0.02em;
         line-height: 1.2;
         margin-bottom: 12px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        word-break: break-word;
+        gap: 10px;
+        flex-wrap: nowrap;
+        word-break: keep-all;
     }
 
     .hero-time {
@@ -1113,7 +1113,7 @@ function renderList(targetDate) {
                         <span style="color: var(--text-muted);">📅</span>
                         <span style="font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;">${timeText}</span>
                     </div>
-                    ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
+                    ${isCurrent ? '<div class="now-badge">NOW</div>' : ''}
                 </div>
                 ${progressHtml ? `<div style="width: 100%; margin-top: 12px;">${progressHtml}</div>` : ''}
             `;
@@ -1127,7 +1127,7 @@ function renderList(targetDate) {
                     <div class="card-content" style="width: 100%;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span class="card-name">${m.mapName}</span>
-                            ${isCurrent ? '<div class="now-badge">LIVE NOW</div>' : ''}
+                            ${isCurrent ? '<div class="now-badge">NOW</div>' : ''}
                         </div>
                         ${progressHtml}
                     </div>
