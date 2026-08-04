@@ -161,8 +161,8 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        flex-wrap: nowrap;
-        word-break: keep-all;
+        flex-wrap: wrap;
+        word-break: break-word;
     }
 
     .hero-time {
@@ -201,7 +201,8 @@
         color: var(--text);
         margin-bottom: 28px;
         letter-spacing: 0.02em;
-        white-space: nowrap;
+        white-space: normal;
+        word-break: break-word;
     }
 
     .hero-next {
@@ -477,6 +478,7 @@
         font-weight: 800;
         letter-spacing: -0.01em;
         color: var(--text);
+        word-break: break-word;
     }
 
     .now-badge {
@@ -752,7 +754,8 @@ const mapMetadata = {
     "Storm Point": { icon: "🏝️", name: "ストームポイント" },
     "Broken Moon": { icon: "🌙", name: "ブロークンムーン" },
     "E-District": { icon: "🏙️", name: "E-ディストリクト" },
-    "Inferno": { icon: "🔥", name: "インフェルノ" }
+    "Inferno": { icon: "🔥", name: "インフェルノ" },
+    "ご愛読ありがとうございました": { icon: "🙏", name: "ご愛読ありがとうございました" }
 };
 
 function getMapMeta(mapName) {
@@ -861,13 +864,19 @@ function updateHero() {
         
         const totalMin = (current.end - current.start) / 60000;
         const diffMin = (current.end - now) / 60000;
-        document.getElementById('currentCountdown').innerHTML = `<span style="opacity: 0.6; font-size: 1.1rem; margin-right: 8px;">⏳</span>${formatDuration(diffMin)}`;
-
-        const progressContainer = document.getElementById('heroProgressContainer');
-        const progressBar = document.getElementById('heroProgressBar');
-        progressContainer.style.display = 'block';
-        const progressPercent = 100 - (diffMin / totalMin * 100);
-        progressBar.style.width = `${progressPercent}%`;
+        
+        if (current.mapName.includes("ご愛読ありがとうございました")) {
+            document.getElementById('currentCountdown').innerHTML = `<span style="font-weight: 800; letter-spacing: 0.1em; color: var(--text);">長い間ありがとうございました</span>`;
+            document.getElementById('currentMapTime').innerText = `サービス提供終了`;
+            document.getElementById('heroProgressContainer').style.display = 'none';
+        } else {
+            document.getElementById('currentCountdown').innerHTML = `<span style="opacity: 0.6; font-size: 1.1rem; margin-right: 8px;">⏳</span>${formatDuration(diffMin)}`;
+            const progressContainer = document.getElementById('heroProgressContainer');
+            const progressBar = document.getElementById('heroProgressBar');
+            progressContainer.style.display = 'block';
+            const progressPercent = 100 - (diffMin / totalMin * 100);
+            progressBar.style.width = `${progressPercent}%`;
+        }
 
         const heroEl = document.querySelector('.hero');
         heroEl.style.background = getMapBrandColor(current.mapName, true) || 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)';
@@ -1046,9 +1055,10 @@ function renderList(targetDate) {
             // フィルタ有効な場合は、日付に関係なく現在時刻以降の予定をすべて表示
             return matchFilter && m.end >= now;
         } else {
-            // 通常時は選択した日付のみ
-            const isSameDay = m.start.toDateString() === targetStr || m.end.toDateString() === targetStr;
-            return isSameDay;
+            // 通常時は選択した日付に一部でも重なっていれば表示
+            const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+            const targetEnd = targetStart + 24 * 60 * 60 * 1000;
+            return m.start.getTime() < targetEnd && m.end.getTime() > targetStart;
         }
     });
 
@@ -1083,6 +1093,10 @@ function renderList(targetDate) {
             } else if (progressPercent < 20) {
                 transformStyle = 'transform: scale(1.02); margin: 8px 0;';
             }
+            if (m.mapName.includes("ご愛読ありがとうございました")) {
+                progressHtml = "";
+                transformStyle = "";
+            }
         } else if (now > m.end) {
             opacityStyle = 'opacity: 0.6;';
         }
@@ -1093,6 +1107,9 @@ function renderList(targetDate) {
         card.setAttribute('style', `${opacityStyle} ${transformStyle} ${isCurrent ? '' : bgStyle}`);
 
         let timeText = `${formatTime(m.start)} – ${formatTime(m.end)}`;
+        if (m.mapName.includes("ご愛読ありがとうございました")) {
+            timeText = "無期限";
+        }
         
         if (isFiltering) {
             // フィルタ時はマップ名等を省き、スケジュール表のようにシンプルにする
@@ -1149,6 +1166,7 @@ function getMapBrandColor(mapName, isGradient=false) {
     else if (mapName.includes("Storm Point") || mapName.includes("ストームポイント")) color = "rgba(0, 119, 255, 0.15)";
     else if (mapName.includes("Olympus") || mapName.includes("オリンパス")) color = "rgba(64, 224, 208, 0.15)";
     else if (mapName.includes("Broken Moon") || mapName.includes("ブロークンムーン")) color = "rgba(138, 43, 226, 0.15)";
+    else if (mapName.includes("ご愛読ありがとうございました")) color = "rgba(255, 215, 0, 0.15)";
     else return "";
 
     if (isGradient) {
