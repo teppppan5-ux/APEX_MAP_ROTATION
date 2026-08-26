@@ -1,0 +1,88 @@
+name: Update Map Rotation
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-map-rotation
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch ranked map rotation from tas.gg
+        env:
+          TAS_TWITCH_ID: ${{ secrets.TAS_TWITCH_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p data
+
+          if [ -z "${TAS_TWITCH_ID:-}" ]; then
+            echo "::error::TAS_TWITCH_ID secret is not set. Add it in repo Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/maps?br_ranked&shownext&lang=jp")"
+          echo "Fetched: $TEXT"
+
+          # tas.ggはエラー時もHTTP 200でプレーンテキストのエラーメッセージを返すため、内容で判定する
+          if echo "$TEXT" | grep -qi "not found\|error"; then
+            echo "::error::tas.gg returned an error: $TEXT"
+            exit 1
+          fi
+
+          # 例: "= 現在のマップスケジュール = | BRランク: E-District (残り38 分) - 次のマップ: ワールズエッジ | (- 運営元：TAS.gg -)"
+          CURRENT_MAP="$(echo "$TEXT" | grep -oP '(?<=BRランク: ).*?(?=\s*\()' || true)"
+          REMAIN_RAW="$(echo "$TEXT" | grep -oP '(?<=\().*?(?=\))' | head -1 || true)"
+          NEXT_MAP="$(echo "$TEXT" | grep -oP '(?<=次のマップ: ).*?(?=\s*\|)' || true)"
+
+          if [ -z "$CURRENT_MAP" ] || [ -z "$NEXT_MAP" ] || [ -z "$REMAIN_RAW" ]; then
+            echo "::error::Failed to parse tas.gg response: $TEXT"
+            exit 1
+          fi
+
+          # "残り38 分" や(想定される)"残り1時間30分"のような表記の両方に対応するため、
+          # 時間・分をそれぞれ抽出して合計分数に変換する
+          REMAIN_HOURS="$(echo "$REMAIN_RAW" | grep -oP '\d+(?=\s*時間)' | head -1 || true)"
+          REMAIN_MINS="$(echo "$REMAIN_RAW" | grep -oP '\d+(?=\s*分)' | head -1 || true)"
+
+          if [ -z "$REMAIN_HOURS" ] && [ -z "$REMAIN_MINS" ]; then
+            echo "::error::Could not extract remaining time from: $REMAIN_RAW"
+            exit 1
+          fi
+
+          REMAIN_MIN=$(( ${REMAIN_HOURS:-0} * 60 + ${REMAIN_MINS:-0} ))
+
+          NEW_JSON="$(jq -n \
+            --arg currentMap "$CURRENT_MAP" \
+            --arg nextMap "$NEXT_MAP" \
+            --argjson remainingMinutesAtFetch "$REMAIN_MIN" \
+            '{currentMap: $currentMap, nextMap: $nextMap, remainingMinutesAtFetch: $remainingMinutesAtFetch}')"
+
+          OLD_JSON="$( [ -f data/maprotation.json ] && jq '{currentMap, nextMap}' data/maprotation.json 2>/dev/null || echo '{}' )"
+          NEW_COMPARE="$(echo "$NEW_JSON" | jq '{currentMap, nextMap}')"
+
+          if [ "$NEW_COMPARE" != "$OLD_JSON" ]; then
+            echo "$NEW_JSON" | jq --arg fetchedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {fetchedAt: $fetchedAt}' > data/maprotation.json
+            echo "CHANGED=1" >> "$GITHUB_ENV"
+          else
+            echo "No change in ranked map rotation. Skipping commit."
+          fi
+
+      - name: Commit and push if changed
+        if: env.CHANGED == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/maprotation.json
+          git commit -m "chore: update ranked map rotation data"
+          git push
