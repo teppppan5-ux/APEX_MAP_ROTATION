@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apex Map Rotation</title>
-<meta name="description" content="Apex Legendsのマップローテーションスケジュールを確認できるツールです。現在のマップ、次のマップ、今後のスケジュールがわかります。">
+<meta name="description" content="Apex Legendsのランクマップローテーションを確認できるツールです。現在のマップ、次のマップ、今後の予測スケジュールがわかります。">
 <meta property="og:title" content="Apex Map Rotation">
-<meta property="og:description" content="Apex Legendsのマップローテーションスケジュールを確認できるツールです。">
+<meta property="og:description" content="Apex Legendsのランクマップローテーションを確認できるツールです。">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%%22 y=%2250%%22 style=%22dominant-baseline:central;text-anchor:middle;font-size:90px;%22>🎮</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -665,8 +665,8 @@
 <div class="container">
     <header class="header">
         <h1>
-            Apex Map Rotation
-            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.0.9</span>
+            Apex Map Rotation <span style="font-size: 0.6em; color: var(--text-muted); font-weight: 700;">Ranked</span>
+            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.1.0</span>
         </h1>
         <div class="header-actions">
             <button id="refreshBtn" class="btn-icon" title="Reload">↻</button>
@@ -742,10 +742,25 @@
 <button id="backToNowBtn" class="floating-btn">↑ Now</button>
 
 <script>
-const sheetUrl = 'https://script.google.com/macros/s/AKfycbwXKMWu_6Rpfp4LG1TA8uPCCfkHqp8AnaJR7PVmt1xy9_3mYzzY96nPJM06jCbc-QbUGQ/exec';
+// twitchIDはブラウザに公開しないため、GitHub Actions (.github/workflows/update-map-rotation.yml)
+// がサーバー側でcmds.tas.ggを叩いてこの静的JSONを定期的に更新している。
+const mapRotationDataUrl = 'data/maprotation.json';
+
+// ランクマップの巡回順序。EA側の都合でマッププールや順番が変わった場合は
+// ここだけ書き換えれば追従できます（時刻は毎回tas.ggから取得するため手動メンテ不要）。
+// 注意: tas.ggはlang=jpでもマップ名を全て日本語化するわけではなく、
+// マップによって日本語("ワールズエッジ")のままだったり英語("E-District")のままだったりします。
+// data/maprotation.json の currentMap / nextMap に実際に入っている文字列と
+// 完全一致させてください（一致しない場合は自動で「現在」「次」のみの表示にフォールバックします）。
+const RANKED_MAP_CYCLE = ["E-District", "ワールズエッジ"];
+// マップローテーションの切り替え間隔（4時間30分）
+const ROTATION_INTERVAL_MS = 4.5 * 60 * 60 * 1000;
+// 何日先まで未来のマップを予測生成するか
+const FUTURE_DAYS = 14;
 
 let mapData = [];
 let selectedDate = new Date();
+let cycleMismatch = false;
 
 const mapMetadata = {
     "Kings Canyon": { icon: "🏜️", name: "キングスキャニオン" },
@@ -754,8 +769,7 @@ const mapMetadata = {
     "Storm Point": { icon: "🏝️", name: "ストームポイント" },
     "Broken Moon": { icon: "🌙", name: "ブロークンムーン" },
     "E-District": { icon: "🏙️", name: "E-ディストリクト" },
-    "Inferno": { icon: "🔥", name: "インフェルノ" },
-    "ご愛読ありがとうございました": { icon: "🙏", name: "ご愛読ありがとうございました" }
+    "Inferno": { icon: "🔥", name: "インフェルノ" }
 };
 
 function getMapMeta(mapName) {
@@ -767,24 +781,48 @@ function getMapMeta(mapName) {
     return { icon: "🗺️", name: mapName };
 }
 
-function parseCSV(csv) {
-    const lines = csv.trim().split('\n');
-    const result = [];
-    for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(',');
-        if (row.length >= 5) {
-            // Safari等でのDateパースエラーを防ぐため、ハイフンをスラッシュに置換
-            const startStr = row[0].replace(/-/g, '/');
-            const endStr = row[1].replace(/-/g, '/');
-            const start = new Date(startStr);
-            const end = new Date(endStr);
-            const mapName = row[4].trim();
-            if (!isNaN(start) && !isNaN(end) && mapName) {
-                result.push({ start, end, mapName });
-            }
+// tas.ggが返す「現在のランクマップ」「残り分数」「次のランクマップ名」から、
+// 4:30固定間隔 + RANKED_MAP_CYCLEを使って未来のスケジュールを生成する
+function buildRankedSchedule(data) {
+    // fetchedAt(取得時刻)を基準に、その時点での残り分数から次マップの開始時刻を逆算する。
+    // ページを開いたタイミングではなく取得時刻を基準にすることで、閲覧時刻に依存しない正確な時刻になる。
+    const fetchedAt = new Date(data.fetchedAt);
+    const nextStart = new Date(fetchedAt.getTime() + data.remainingMinutesAtFetch * 60 * 1000);
+    const currentStart = new Date(nextStart.getTime() - ROTATION_INTERVAL_MS);
+
+    const currentEntry = {
+        start: currentStart,
+        end: nextStart,
+        mapName: data.currentMap
+    };
+    const nextEntry = {
+        start: nextStart,
+        end: new Date(nextStart.getTime() + ROTATION_INTERVAL_MS),
+        mapName: data.nextMap
+    };
+    const result = [currentEntry, nextEntry];
+
+    const curIdx = RANKED_MAP_CYCLE.indexOf(data.currentMap);
+    const nextIdx = RANKED_MAP_CYCLE.indexOf(data.nextMap);
+    const isValidCycle = RANKED_MAP_CYCLE.length >= 2 &&
+        curIdx !== -1 && nextIdx !== -1 &&
+        nextIdx === (curIdx + 1) % RANKED_MAP_CYCLE.length;
+
+    cycleMismatch = !isValidCycle;
+
+    if (isValidCycle) {
+        const horizon = new Date(nextEntry.end.getTime() + FUTURE_DAYS * 24 * 60 * 60 * 1000);
+        let idx = nextIdx;
+        let start = nextEntry.end;
+        while (start < horizon) {
+            idx = (idx + 1) % RANKED_MAP_CYCLE.length;
+            const end = new Date(start.getTime() + ROTATION_INTERVAL_MS);
+            result.push({ start, end, mapName: RANKED_MAP_CYCLE[idx] });
+            start = end;
         }
     }
-    return result.sort((a, b) => a.start - b.start);
+
+    return result;
 }
 
 function formatTime(date) {
@@ -808,14 +846,22 @@ async function fetchMapData() {
     try {
         document.getElementById('errorContainer').innerHTML = '';
         document.getElementById('currentMapName').innerHTML = 'Loading...';
-        
-        const res = await fetch(sheetUrl);
-        if (!res.ok) throw new Error("通信エラー");
-        const text = await res.text();
-        if (text.startsWith("Error:") || text.startsWith("<")) throw new Error("不正なデータ");
 
-        mapData = parseCSV(text);
+        const res = await fetch(mapRotationDataUrl, { cache: 'no-store' });
+        if (!res.ok) throw new Error("通信エラー");
+        const json = await res.json();
+        if (!json || !json.currentMap || !json.nextMap || !json.fetchedAt ||
+            typeof json.remainingMinutesAtFetch !== 'number') {
+            throw new Error("不正なデータ");
+        }
+
+        mapData = buildRankedSchedule(json).sort((a, b) => a.start - b.start);
         if(mapData.length === 0) throw new Error("データがありません");
+
+        if (cycleMismatch) {
+            document.getElementById('errorContainer').innerHTML =
+                `<div class="empty-msg" style="color:#f59e0b;">⚠ RANKED_MAP_CYCLEの設定が現在のマップ名と一致していません。コード内のマップ巡回順を更新してください（今は「現在」「次」のみ表示中）。</div>`;
+        }
 
         updateMapFilterOptions();
 
@@ -864,19 +910,13 @@ function updateHero() {
         
         const totalMin = (current.end - current.start) / 60000;
         const diffMin = (current.end - now) / 60000;
-        
-        if (current.mapName.includes("ご愛読ありがとうございました")) {
-            document.getElementById('currentCountdown').innerHTML = `<span style="font-weight: 800; letter-spacing: 0.1em; color: var(--text);">長い間ありがとうございました</span>`;
-            document.getElementById('currentMapTime').innerText = `サービス提供終了`;
-            document.getElementById('heroProgressContainer').style.display = 'none';
-        } else {
-            document.getElementById('currentCountdown').innerHTML = `<span style="opacity: 0.6; font-size: 1.1rem; margin-right: 8px;">⏳</span>${formatDuration(diffMin)}`;
-            const progressContainer = document.getElementById('heroProgressContainer');
-            const progressBar = document.getElementById('heroProgressBar');
-            progressContainer.style.display = 'block';
-            const progressPercent = 100 - (diffMin / totalMin * 100);
-            progressBar.style.width = `${progressPercent}%`;
-        }
+
+        document.getElementById('currentCountdown').innerHTML = `<span style="opacity: 0.6; font-size: 1.1rem; margin-right: 8px;">⏳</span>${formatDuration(diffMin)}`;
+        const progressContainer = document.getElementById('heroProgressContainer');
+        const progressBar = document.getElementById('heroProgressBar');
+        progressContainer.style.display = 'block';
+        const progressPercent = 100 - (diffMin / totalMin * 100);
+        progressBar.style.width = `${progressPercent}%`;
 
         const heroEl = document.querySelector('.hero');
         heroEl.style.background = getMapBrandColor(current.mapName, true) || 'linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%)';
@@ -902,6 +942,8 @@ function updateHero() {
     }
 }
 setInterval(updateHero, 30000);
+// APIの最新状況(current/next)と同期を取るため、定期的に再取得する
+setInterval(fetchMapData, 10 * 60 * 1000);
 
 // ==========================================
 // Tabs & Calendar
@@ -1093,10 +1135,6 @@ function renderList(targetDate) {
             } else if (progressPercent < 20) {
                 transformStyle = 'transform: scale(1.02); margin: 8px 0;';
             }
-            if (m.mapName.includes("ご愛読ありがとうございました")) {
-                progressHtml = "";
-                transformStyle = "";
-            }
         } else if (now > m.end) {
             opacityStyle = 'opacity: 0.6;';
         }
@@ -1107,10 +1145,7 @@ function renderList(targetDate) {
         card.setAttribute('style', `${opacityStyle} ${transformStyle} ${isCurrent ? '' : bgStyle}`);
 
         let timeText = `${formatTime(m.start)} – ${formatTime(m.end)}`;
-        if (m.mapName.includes("ご愛読ありがとうございました")) {
-            timeText = "無期限";
-        }
-        
+
         if (isFiltering) {
             // フィルタ時はマップ名等を省き、スケジュール表のようにシンプルにする
             const mMonth = m.start.getMonth() + 1;
@@ -1166,7 +1201,6 @@ function getMapBrandColor(mapName, isGradient=false) {
     else if (mapName.includes("Storm Point") || mapName.includes("ストームポイント")) color = "rgba(0, 119, 255, 0.15)";
     else if (mapName.includes("Olympus") || mapName.includes("オリンパス")) color = "rgba(64, 224, 208, 0.15)";
     else if (mapName.includes("Broken Moon") || mapName.includes("ブロークンムーン")) color = "rgba(138, 43, 226, 0.15)";
-    else if (mapName.includes("ご愛読ありがとうございました")) color = "rgba(255, 215, 0, 0.15)";
     else return "";
 
     if (isGradient) {
