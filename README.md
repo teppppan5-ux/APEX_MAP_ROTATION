@@ -23,15 +23,24 @@ EA側の都合でマップローテーションが頻繁に変更され追従し
 のため、GitHub Actions側でこのテキストを解析し、`{currentMap, nextMap, remainingMinutesAtFetch, fetchedAt}`という
 構造化JSONに変換して保存しています。
 
-その先の未来のマップ名はAPI側からは提供されないため、`index.html`内の`RANKED_MAP_CYCLE`配列
-（ランクマップの巡回順）と、4時間30分固定のローテーション間隔という前提を組み合わせて予測生成しています。
-時刻は毎回APIから取得するため手動更新は不要ですが、**EA側がランクマップのプールや巡回順そのものを変更した場合のみ**、
-`RANKED_MAP_CYCLE`の配列を書き換える必要があります。
+その先の未来のマップ名はAPI側からは提供されないため、[data/mapcycle.json](data/mapcycle.json)に定義した
+ランクマップの巡回順（`cycle`）とローテーション間隔（`rotationMinutes`、既定270分=4時間30分）を
+組み合わせて予測生成しています。時刻は毎回APIから取得するため手動更新は不要ですが、
+**シーズン切り替わりなどでEA側がランクマップのプールや巡回順、間隔を変更した場合のみ**、
+`data/mapcycle.json`をGitHub上で直接編集してください（コードを触る必要はありません）。
+
+```json
+{
+  "cycle": ["E-District", "ワールズエッジ", "ストームポイント"],
+  "rotationMinutes": 270
+}
+```
 
 tas.ggは`lang=jp`でもマップ名を必ずしも全て日本語化しないため（例: "ワールズエッジ"は日本語化されるが
-"E-District"は英語のまま）、`RANKED_MAP_CYCLE`には`data/maprotation.json`の`currentMap`/`nextMap`に
+"E-District"は英語のまま）、`cycle`には`data/maprotation.json`の`currentMap`/`nextMap`に
 実際に入っている文字列をそのままコピーしてください。一致しない場合は自動的に「現在」「次」のみの
-表示にフォールバックし、画面上に警告が表示されます。
+表示にフォールバックし、画面上に警告が表示されます。`data/mapcycle.json`自体の取得に失敗した場合は
+`index.html`内のフォールバック値（現行のマッププール）で動作します。
 
 ### アーキテクチャ（twitchIDの秘匿）
 
