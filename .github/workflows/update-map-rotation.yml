@@ -1,8 +1,9 @@
 name: Update Map Rotation
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # GitHub Actionsのschedule(cron)は混雑時に数十分単位で遅延することがあるため、
+  # Cloudflare Workers の Cron Trigger から workflow_dispatch を叩く方式に変更した。
+  # (詳細: Cloudflareダッシュボード apex-map-rotation-trigger Worker, Cron Trigger */10 * * * *)
   workflow_dispatch:
 
 permissions:
