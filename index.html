@@ -215,6 +215,128 @@
         line-height: 1.4;
     }
 
+    /* ======== Manual Override (ズレ手動補正) ======== */
+    .override-badge {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        padding: 3px 8px;
+        border-radius: 999px;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        vertical-align: middle;
+    }
+
+    .override-section {
+        margin-top: 16px;
+    }
+
+    .override-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-dark);
+        color: var(--text-muted);
+        padding: 8px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: 0.15s;
+    }
+    .override-toggle-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text);
+    }
+
+    .override-panel {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border-dark);
+    }
+
+    .override-field-label {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+
+    .override-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .override-input {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 0.95rem;
+        font-family: inherit;
+        text-align: center;
+    }
+    .override-input:focus {
+        outline: none;
+        border-color: var(--text-muted);
+    }
+
+    .override-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .override-btn-save {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 10px;
+        background: var(--danger);
+        color: white;
+        font-weight: 800;
+        font-size: 0.9rem;
+        font-family: inherit;
+        cursor: pointer;
+        transition: 0.15s;
+    }
+    .override-btn-save:hover { filter: brightness(1.1); }
+
+    .override-btn-clear {
+        padding: 10px 14px;
+        border: 1px solid var(--border-dark);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.9rem;
+        font-family: inherit;
+        cursor: pointer;
+    }
+    .override-btn-clear:hover {
+        background: var(--bg-hover);
+        color: var(--text);
+    }
+
+    .override-status {
+        font-size: 0.8rem;
+        color: #f59e0b;
+        margin-top: 10px;
+        padding: 10px 12px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 10px;
+        line-height: 1.5;
+    }
+
     /* ======== Toolbar (Tabs & Filters) ======== */
     .toolbar {
         position: sticky;
@@ -666,7 +788,7 @@
     <header class="header">
         <h1>
             Apex Map Rotation <span style="font-size: 0.6em; color: var(--text-muted); font-weight: 700;">Ranked</span>
-            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.1.0</span>
+            <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.2.0</span>
         </h1>
         <div class="header-actions">
             <button id="refreshBtn" class="btn-icon" title="Reload">↻</button>
@@ -680,7 +802,7 @@
         <div class="col-left">
             <!-- Hero: Current Map -->
             <section class="hero">
-                <div class="hero-label">Now Playing</div>
+                <div class="hero-label">Now Playing <span id="overrideBadge" class="override-badge" style="display:none;">⚠ 手動補正中</span></div>
                 <div class="hero-title" id="currentMapName">Loading...</div>
                 <div class="hero-time" id="currentMapTime">--:-- – --:--</div>
                 <div class="hero-progress-container" id="heroProgressContainer" style="display:none;">
@@ -688,6 +810,24 @@
                 </div>
                 <div class="hero-countdown" id="currentCountdown">--</div>
                 <div class="hero-next" id="nextMapInfo">Next: ---</div>
+
+                <div class="override-section">
+                    <button id="toggleOverrideBtn" class="override-toggle-btn">🛠 マップがズレている場合の手動補正</button>
+                    <div class="override-panel" id="overridePanel" style="display:none;">
+                        <label class="override-field-label">現在のマップ</label>
+                        <select id="overrideMapSelect" class="filter-select" style="margin-bottom:12px;"></select>
+                        <label class="override-field-label">次のマップ切替までの残り時間</label>
+                        <div class="override-row">
+                            <input type="number" id="overrideHours" class="override-input" placeholder="時間" min="0" max="4" inputmode="numeric">
+                            <input type="number" id="overrideMinutes" class="override-input" placeholder="分" min="0" max="59" inputmode="numeric">
+                        </div>
+                        <div class="override-actions">
+                            <button id="saveOverrideBtn" class="override-btn-save">この内容で補正する</button>
+                            <button id="clearOverrideBtn" class="override-btn-clear" style="display:none;">解除</button>
+                        </div>
+                        <div class="override-status" id="overrideStatusMsg" style="display:none;"></div>
+                    </div>
+                </div>
             </section>
 
             <!-- Filter -->
@@ -752,7 +892,7 @@ const mapRotationDataUrl = 'data/maprotation.json';
 // マップによって日本語("ワールズエッジ")のままだったり英語("E-District")のままだったりします。
 // data/maprotation.json の currentMap / nextMap に実際に入っている文字列と
 // 完全一致させてください（一致しない場合は自動で「現在」「次」のみの表示にフォールバックします）。
-const RANKED_MAP_CYCLE = ["E-District", "ワールズエッジ"];
+const RANKED_MAP_CYCLE = ["E-District", "ワールズエッジ", "ストームポイント"];
 // マップローテーションの切り替え間隔（4時間30分）
 const ROTATION_INTERVAL_MS = 4.5 * 60 * 60 * 1000;
 // 何日先まで未来のマップを予測生成するか
@@ -761,6 +901,45 @@ const FUTURE_DAYS = 14;
 let mapData = [];
 let selectedDate = new Date();
 let cycleMismatch = false;
+let manualOverrideActive = false;
+
+// ==========================================
+// 手動補正（ローテのズレを一時的に自分で補正する機能）
+// ==========================================
+const MANUAL_OVERRIDE_KEY = 'apexMapRotationManualOverride_v1';
+
+function getManualOverride() {
+    try {
+        const raw = localStorage.getItem(MANUAL_OVERRIDE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.currentMap || !obj.savedAt || typeof obj.remainingMinutesAtSave !== 'number') return null;
+        return obj;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveManualOverride(currentMap, remainingMinutes) {
+    try {
+        localStorage.setItem(MANUAL_OVERRIDE_KEY, JSON.stringify({
+            currentMap,
+            remainingMinutesAtSave: remainingMinutes,
+            savedAt: new Date().toISOString()
+        }));
+    } catch (e) { /* localStorageが使えない環境では無視 */ }
+}
+
+function clearManualOverrideStorage() {
+    try { localStorage.removeItem(MANUAL_OVERRIDE_KEY); } catch (e) {}
+}
+
+// tas.ggのAPIは実際の切り替え時刻から±1-2分ずれて返ってくることがあるため、
+// キリのいい30分単位（xx:00 / xx:30）に丸めて表示のブレをなくす
+function roundToNearest30Min(date) {
+    const unit = 30 * 60 * 1000;
+    return new Date(Math.round(date.getTime() / unit) * unit);
+}
 
 const mapMetadata = {
     "Kings Canyon": { icon: "🏜️", name: "キングスキャニオン" },
@@ -787,7 +966,8 @@ function buildRankedSchedule(data) {
     // fetchedAt(取得時刻)を基準に、その時点での残り分数から次マップの開始時刻を逆算する。
     // ページを開いたタイミングではなく取得時刻を基準にすることで、閲覧時刻に依存しない正確な時刻になる。
     const fetchedAt = new Date(data.fetchedAt);
-    const nextStart = new Date(fetchedAt.getTime() + data.remainingMinutesAtFetch * 60 * 1000);
+    const rawNextStart = new Date(fetchedAt.getTime() + data.remainingMinutesAtFetch * 60 * 1000);
+    const nextStart = roundToNearest30Min(rawNextStart);
     const currentStart = new Date(nextStart.getTime() - ROTATION_INTERVAL_MS);
 
     const currentEntry = {
@@ -855,7 +1035,35 @@ async function fetchMapData() {
             throw new Error("不正なデータ");
         }
 
-        mapData = buildRankedSchedule(json).sort((a, b) => a.start - b.start);
+        // 手動補正が保存されていて、かつまだその予測時刻(次のマップ開始)を過ぎていなければ
+        // 自動取得データの代わりにそちらを基準にスケジュールを組み立てる
+        let effectiveData = json;
+        manualOverrideActive = false;
+        const override = getManualOverride();
+        if (override) {
+            const savedAt = new Date(override.savedAt);
+            const predictedNextStart = roundToNearest30Min(new Date(savedAt.getTime() + override.remainingMinutesAtSave * 60000));
+            if (predictedNextStart.getTime() > Date.now()) {
+                const curIdx = RANKED_MAP_CYCLE.indexOf(override.currentMap);
+                const nextMapName = curIdx !== -1
+                    ? RANKED_MAP_CYCLE[(curIdx + 1) % RANKED_MAP_CYCLE.length]
+                    : json.nextMap;
+                effectiveData = {
+                    currentMap: override.currentMap,
+                    nextMap: nextMapName,
+                    remainingMinutesAtFetch: override.remainingMinutesAtSave,
+                    fetchedAt: override.savedAt
+                };
+                manualOverrideActive = true;
+            } else {
+                // 予測時刻を過ぎていたら補正は役目を終えたとみなし、自動データに戻す
+                clearManualOverrideStorage();
+            }
+        }
+        document.getElementById('overrideBadge').style.display = manualOverrideActive ? 'inline-flex' : 'none';
+        refreshOverrideUI();
+
+        mapData = buildRankedSchedule(effectiveData).sort((a, b) => a.start - b.start);
         if(mapData.length === 0) throw new Error("データがありません");
 
         if (cycleMismatch) {
@@ -1274,6 +1482,71 @@ function checkNowBtnVisibility() {
         btn.classList.remove('visible');
     }
 }
+
+// ==========================================
+// 手動補正パネルのUI制御
+// ==========================================
+function populateOverrideMapSelect() {
+    const select = document.getElementById('overrideMapSelect');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '';
+    RANKED_MAP_CYCLE.forEach(mapName => {
+        const meta = getMapMeta(mapName);
+        const opt = document.createElement('option');
+        opt.value = mapName;
+        opt.textContent = `${meta.icon} ${meta.name}`;
+        select.appendChild(opt);
+    });
+    if (RANKED_MAP_CYCLE.includes(currentVal)) select.value = currentVal;
+}
+
+function refreshOverrideUI() {
+    populateOverrideMapSelect();
+    const override = getManualOverride();
+    const clearBtn = document.getElementById('clearOverrideBtn');
+    const statusMsg = document.getElementById('overrideStatusMsg');
+
+    if (override && manualOverrideActive) {
+        clearBtn.style.display = 'inline-block';
+        statusMsg.style.display = 'block';
+        const meta = getMapMeta(override.currentMap);
+        statusMsg.textContent = `手動補正中: ${meta.icon} ${meta.name} を基準に計算しています。次回の自動データ更新、または「解除」を押すと自動に戻ります。`;
+        document.getElementById('overrideMapSelect').value = override.currentMap;
+    } else {
+        clearBtn.style.display = 'none';
+        statusMsg.style.display = 'none';
+    }
+}
+
+document.getElementById('toggleOverrideBtn').addEventListener('click', () => {
+    const panel = document.getElementById('overridePanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) refreshOverrideUI();
+});
+
+document.getElementById('saveOverrideBtn').addEventListener('click', () => {
+    const mapName = document.getElementById('overrideMapSelect').value;
+    const h = parseInt(document.getElementById('overrideHours').value, 10) || 0;
+    const m = parseInt(document.getElementById('overrideMinutes').value, 10) || 0;
+    const totalMin = h * 60 + m;
+
+    if (!mapName || totalMin <= 0) {
+        alert('現在のマップと、次のマップまでの残り時間（0分より大きい値）を入力してください。');
+        return;
+    }
+
+    saveManualOverride(mapName, totalMin);
+    document.getElementById('overrideHours').value = '';
+    document.getElementById('overrideMinutes').value = '';
+    fetchMapData();
+});
+
+document.getElementById('clearOverrideBtn').addEventListener('click', () => {
+    clearManualOverrideStorage();
+    fetchMapData();
+});
 
 document.getElementById('refreshBtn').addEventListener('click', fetchMapData);
 document.getElementById('mapFilter').addEventListener('change', (e) => {
