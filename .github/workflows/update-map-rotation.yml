@@ -79,11 +79,65 @@ jobs:
             echo "No change in ranked map rotation. Skipping commit."
           fi
 
+      - name: Fetch ranked split time-left from tas.gg
+        env:
+          TAS_TWITCH_ID: ${{ secrets.TAS_TWITCH_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p data
+
+          TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/timeleft?lang=jp")"
+          echo "Fetched (split): $TEXT"
+
+          if echo "$TEXT" | grep -qi "not found\|error"; then
+            echo "::error::tas.gg (timeleft) returned an error: $TEXT"
+            exit 1
+          fi
+
+          # 例: "= ランクスプリットの残り時間 = | 現在のランクスプリットの残り時間は2 週間, 5 日, 6 時間, 36 分です。 | (- 運営元：TAS.gg -)"
+          SPLIT_WEEKS="$(echo "$TEXT" | grep -oP '\d+(?=\s*週間)' | head -1 || true)"
+          SPLIT_DAYS="$(echo "$TEXT" | grep -oP '\d+(?=\s*日)' | head -1 || true)"
+          SPLIT_HOURS="$(echo "$TEXT" | grep -oP '\d+(?=\s*時間)' | head -1 || true)"
+          SPLIT_MINS="$(echo "$TEXT" | grep -oP '\d+(?=\s*分)' | head -1 || true)"
+
+          if [ -z "$SPLIT_WEEKS" ] && [ -z "$SPLIT_DAYS" ] && [ -z "$SPLIT_HOURS" ] && [ -z "$SPLIT_MINS" ]; then
+            echo "::error::Failed to parse split time-left: $TEXT"
+            exit 1
+          fi
+
+          SPLIT_TOTAL_MIN=$(( ${SPLIT_WEEKS:-0} * 7 * 24 * 60 + ${SPLIT_DAYS:-0} * 24 * 60 + ${SPLIT_HOURS:-0} * 60 + ${SPLIT_MINS:-0} ))
+          SPLIT_FETCHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          SPLIT_END_EPOCH=$(( $(date -u -d "$SPLIT_FETCHED_AT" +%s) + SPLIT_TOTAL_MIN * 60 ))
+          # 取得のたびに数分単位で揺れる（残り時間は分単位でしか取れない）ため、
+          # 5分単位に丸めて、実際にスプリットが延長/終了しない限りコミットが増えないようにする
+          SPLIT_END_EPOCH_ROUNDED=$(( (SPLIT_END_EPOCH + 150) / 300 * 300 ))
+          SPLIT_END_AT="$(date -u -d "@$SPLIT_END_EPOCH_ROUNDED" +%Y-%m-%dT%H:%M:%SZ)"
+
+          NEW_SPLIT_JSON="$(jq -n --arg splitEndAt "$SPLIT_END_AT" '{splitEndAt: $splitEndAt}')"
+          OLD_SPLIT_JSON="$( [ -f data/splitend.json ] && jq '{splitEndAt}' data/splitend.json 2>/dev/null || echo '{}' )"
+
+          if [ "$NEW_SPLIT_JSON" != "$OLD_SPLIT_JSON" ]; then
+            echo "$NEW_SPLIT_JSON" | jq --arg fetchedAt "$SPLIT_FETCHED_AT" '. + {fetchedAt: $fetchedAt}' > data/splitend.json
+            echo "SPLIT_CHANGED=1" >> "$GITHUB_ENV"
+          else
+            echo "No change in ranked split end time. Skipping commit."
+          fi
+
       - name: Commit and push if changed
-        if: env.CHANGED == '1'
+        if: env.CHANGED == '1' || env.SPLIT_CHANGED == '1'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/maprotation.json
-          git commit -m "chore: update ranked map rotation data"
+
+          MSG_PARTS=""
+          if [ "${CHANGED:-}" = "1" ]; then
+            git add data/maprotation.json
+            MSG_PARTS="map rotation"
+          fi
+          if [ "${SPLIT_CHANGED:-}" = "1" ]; then
+            git add data/splitend.json
+            MSG_PARTS="${MSG_PARTS:+$MSG_PARTS, }split end time"
+          fi
+
+          git commit -m "chore: update ranked $MSG_PARTS data"
           git push

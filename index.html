@@ -215,6 +215,38 @@
         line-height: 1.4;
     }
 
+    /* ======== Ranked Split Countdown ======== */
+    .split-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        line-height: 1.35;
+    }
+
+    .split-card-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #f59e0b;
+        margin-bottom: 2px;
+    }
+
+    .split-card-main {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text);
+    }
+
+    .split-card-main #splitEndDateTime {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
+    }
+
     /* ======== Manual Override (ズレ手動補正) ======== */
     .override-badge {
         font-size: 0.7rem;
@@ -800,6 +832,14 @@
     <div class="main-layout">
         <!-- Left Column -->
         <div class="col-left">
+            <!-- Ranked Split Countdown -->
+            <section class="split-card" id="splitCountdownCard" style="display:none;">
+                <div class="split-card-label">🏆 ランクスプリット終了まで</div>
+                <div class="split-card-main">
+                    <span id="splitRemaining">--</span>　<span id="splitEndDateTime">--</span>
+                </div>
+            </section>
+
             <!-- Hero: Current Map -->
             <section class="hero">
                 <div class="hero-label">Now Playing <span id="overrideBadge" class="override-badge" style="display:none;">⚠ 手動補正中</span></div>
@@ -1020,6 +1060,58 @@ function formatDuration(minutes) {
     if (h > 0) return `あと ${h}時間`;
     return `あと ${m}分`;
 }
+
+// ミリ秒を「○日○時間」フォーマットに変換する関数（ランクスプリット用）
+function formatDaysDuration(ms) {
+    if (ms <= 0) return "終了";
+    const totalMin = Math.floor(ms / 60000);
+    const days = Math.floor(totalMin / (60 * 24));
+    const hours = Math.floor((totalMin % (60 * 24)) / 60);
+    if (days > 0 && hours > 0) return `あと ${days}日 ${hours}時間`;
+    if (days > 0) return `あと ${days}日`;
+    if (hours > 0) return `あと ${hours}時間`;
+    return "まもなく";
+}
+
+function formatDateTimeJST(date) {
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const day = dayNames[date.getDay()];
+    return `【終了日時: ${y}/${m}/${d}(${day}) ${formatTime(date)}】`;
+}
+
+// ==========================================
+// ランクスプリット終了カウントダウン
+// ==========================================
+const splitEndDataUrl = 'data/splitend.json';
+let splitEndAt = null;
+
+async function fetchSplitEndData() {
+    try {
+        const res = await fetch(splitEndDataUrl, { cache: 'no-store' });
+        if (!res.ok) throw new Error("通信エラー");
+        const json = await res.json();
+        if (!json || !json.splitEndAt) throw new Error("不正なデータ");
+        splitEndAt = new Date(json.splitEndAt);
+        document.getElementById('splitCountdownCard').style.display = 'block';
+        updateSplitCountdown();
+    } catch (e) {
+        document.getElementById('splitCountdownCard').style.display = 'none';
+    }
+}
+
+function updateSplitCountdown() {
+    if (!splitEndAt) return;
+    const diffMs = splitEndAt.getTime() - Date.now();
+    document.getElementById('splitRemaining').textContent = formatDaysDuration(diffMs);
+    document.getElementById('splitEndDateTime').textContent = formatDateTimeJST(splitEndAt);
+}
+
+setInterval(updateSplitCountdown, 60000);
+// スプリット終了時刻はほぼ動かないため、マップローテほど高頻度に取得し直す必要はない
+setInterval(fetchSplitEndData, 30 * 60 * 1000);
 
 // ==========================================
 // データ取得と初期化
@@ -1602,6 +1694,7 @@ document.getElementById('backToNowBtn').addEventListener('click', () => {
 });
 
 window.addEventListener('load', fetchMapData);
+window.addEventListener('load', fetchSplitEndData);
 </script>
 </body>
 </html>
