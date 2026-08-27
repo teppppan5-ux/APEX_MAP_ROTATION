@@ -227,22 +227,22 @@
     }
 
     .split-card-label {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         font-weight: 700;
         color: #f59e0b;
         margin-bottom: 2px;
     }
 
-    .split-card-main {
-        font-size: 0.95rem;
+    .split-card-remaining {
+        font-size: 1.1rem;
         font-weight: 800;
         color: var(--text);
     }
 
-    .split-card-main #splitEndDateTime {
-        font-size: 0.82rem;
-        font-weight: 600;
-        color: var(--text-muted);
+    .split-card-end {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
         font-variant-numeric: tabular-nums;
         font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
     }
@@ -832,9 +832,8 @@
     <!-- Ranked Split Countdown -->
     <section class="split-card" id="splitCountdownCard" style="display:none;">
         <div class="split-card-label">🏆 ランクスプリット終了まで</div>
-        <div class="split-card-main">
-            <span id="splitRemaining">--</span>　<span id="splitEndDateTime">--</span>
-        </div>
+        <div class="split-card-remaining" id="splitRemaining">--</div>
+        <div class="split-card-end" id="splitEndDateTime">--</div>
     </section>
 
     <div class="main-layout">
@@ -1080,7 +1079,7 @@ function formatDateTimeJST(date) {
     const m = date.getMonth() + 1;
     const d = date.getDate();
     const day = dayNames[date.getDay()];
-    return `【終了日時: ${y}/${m}/${d}(${day}) ${formatTime(date)}】`;
+    return `終了日時: ${y}/${m}/${d}(${day}) ${formatTime(date)}`;
 }
 
 // ==========================================
