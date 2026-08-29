@@ -32,22 +32,39 @@ jobs:
             exit 1
           fi
 
-          TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/maps?br_ranked&shownext&lang=jp")"
-          echo "Fetched: $TEXT"
+          # tas.gg側の一時的な通信エラー(curl失敗)や、応答内容の揺れ(次マップ情報の欠落など)に
+          # 備えて、最大2回(初回+1リトライ)まで取得・解析を試みる
+          CURRENT_MAP=""
+          NEXT_MAP=""
+          REMAIN_RAW=""
+          for attempt in 1 2; do
+            if TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/maps?br_ranked&shownext&lang=jp")"; then
+              echo "Fetched (attempt $attempt): $TEXT"
 
-          # tas.ggはエラー時もHTTP 200でプレーンテキストのエラーメッセージを返すため、内容で判定する
-          if echo "$TEXT" | grep -qi "not found\|error"; then
-            echo "::error::tas.gg returned an error: $TEXT"
-            exit 1
-          fi
+              # tas.ggはエラー時もHTTP 200でプレーンテキストのエラーメッセージを返すため、内容で判定する
+              if ! echo "$TEXT" | grep -qi "not found\|error"; then
+                # 例: "= 現在のマップスケジュール = | BRランク: E-District (残り38 分) - 次のマップ: ワールズエッジ | (- 運営元：TAS.gg -)"
+                CURRENT_MAP="$(echo "$TEXT" | grep -oP '(?<=BRランク: ).*?(?=\s*\()' || true)"
+                REMAIN_RAW="$(echo "$TEXT" | grep -oP '(?<=\().*?(?=\))' | head -1 || true)"
+                NEXT_MAP="$(echo "$TEXT" | grep -oP '(?<=次のマップ: ).*?(?=\s*\|)' || true)"
+              fi
+            else
+              echo "curl failed on attempt $attempt (exit code $?)"
+            fi
 
-          # 例: "= 現在のマップスケジュール = | BRランク: E-District (残り38 分) - 次のマップ: ワールズエッジ | (- 運営元：TAS.gg -)"
-          CURRENT_MAP="$(echo "$TEXT" | grep -oP '(?<=BRランク: ).*?(?=\s*\()' || true)"
-          REMAIN_RAW="$(echo "$TEXT" | grep -oP '(?<=\().*?(?=\))' | head -1 || true)"
-          NEXT_MAP="$(echo "$TEXT" | grep -oP '(?<=次のマップ: ).*?(?=\s*\|)' || true)"
+            if [ -n "$CURRENT_MAP" ] && [ -n "$NEXT_MAP" ] && [ -n "$REMAIN_RAW" ]; then
+              break
+            fi
+
+            CURRENT_MAP=""; NEXT_MAP=""; REMAIN_RAW=""
+            if [ "$attempt" -eq 1 ]; then
+              echo "::warning::Attempt 1 failed, retrying in 10s..."
+              sleep 10
+            fi
+          done
 
           if [ -z "$CURRENT_MAP" ] || [ -z "$NEXT_MAP" ] || [ -z "$REMAIN_RAW" ]; then
-            echo "::error::Failed to parse tas.gg response: $TEXT"
+            echo "::error::Failed to fetch/parse tas.gg response after retry: ${TEXT:-<no response>}"
             exit 1
           fi
 
@@ -86,22 +103,35 @@ jobs:
           set -euo pipefail
           mkdir -p data
 
-          TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/timeleft?lang=jp")"
-          echo "Fetched (split): $TEXT"
+          # こちらも同様に、最大2回(初回+1リトライ)まで取得・解析を試みる
+          SPLIT_WEEKS=""; SPLIT_DAYS=""; SPLIT_HOURS=""; SPLIT_MINS=""
+          for attempt in 1 2; do
+            if TEXT="$(curl -sf "https://cmds.tas.gg/${TAS_TWITCH_ID}/timeleft?lang=jp")"; then
+              echo "Fetched (split, attempt $attempt): $TEXT"
 
-          if echo "$TEXT" | grep -qi "not found\|error"; then
-            echo "::error::tas.gg (timeleft) returned an error: $TEXT"
-            exit 1
-          fi
+              if ! echo "$TEXT" | grep -qi "not found\|error"; then
+                # 例: "= ランクスプリットの残り時間 = | 現在のランクスプリットの残り時間は2 週間, 5 日, 6 時間, 36 分です。 | (- 運営元：TAS.gg -)"
+                SPLIT_WEEKS="$(echo "$TEXT" | grep -oP '\d+(?=\s*週間)' | head -1 || true)"
+                SPLIT_DAYS="$(echo "$TEXT" | grep -oP '\d+(?=\s*日)' | head -1 || true)"
+                SPLIT_HOURS="$(echo "$TEXT" | grep -oP '\d+(?=\s*時間)' | head -1 || true)"
+                SPLIT_MINS="$(echo "$TEXT" | grep -oP '\d+(?=\s*分)' | head -1 || true)"
+              fi
+            else
+              echo "curl failed on attempt $attempt (exit code $?)"
+            fi
 
-          # 例: "= ランクスプリットの残り時間 = | 現在のランクスプリットの残り時間は2 週間, 5 日, 6 時間, 36 分です。 | (- 運営元：TAS.gg -)"
-          SPLIT_WEEKS="$(echo "$TEXT" | grep -oP '\d+(?=\s*週間)' | head -1 || true)"
-          SPLIT_DAYS="$(echo "$TEXT" | grep -oP '\d+(?=\s*日)' | head -1 || true)"
-          SPLIT_HOURS="$(echo "$TEXT" | grep -oP '\d+(?=\s*時間)' | head -1 || true)"
-          SPLIT_MINS="$(echo "$TEXT" | grep -oP '\d+(?=\s*分)' | head -1 || true)"
+            if [ -n "$SPLIT_WEEKS" ] || [ -n "$SPLIT_DAYS" ] || [ -n "$SPLIT_HOURS" ] || [ -n "$SPLIT_MINS" ]; then
+              break
+            fi
+
+            if [ "$attempt" -eq 1 ]; then
+              echo "::warning::Attempt 1 failed, retrying in 10s..."
+              sleep 10
+            fi
+          done
 
           if [ -z "$SPLIT_WEEKS" ] && [ -z "$SPLIT_DAYS" ] && [ -z "$SPLIT_HOURS" ] && [ -z "$SPLIT_MINS" ]; then
-            echo "::error::Failed to parse split time-left: $TEXT"
+            echo "::error::Failed to fetch/parse split time-left after retry: ${TEXT:-<no response>}"
             exit 1
           fi
 
