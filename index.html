@@ -1012,15 +1012,21 @@ function buildRankedSchedule(data) {
     const nextStart = roundToNearest30Min(rawNextStart);
     const currentStart = new Date(nextStart.getTime() - ROTATION_INTERVAL_MS);
 
+    // currentEntry/nextEntryはtas.ggが直接報告してくる実データなので、
+    // シーズン境界をまたいでいても常に正しい（predicted: false）。
+    // これより先はRANKED_MAP_CYCLEが今後も続くという「こちら側の推測」でしかないため、
+    // predicted: true を付けて区別する（スプリット終了以降は非表示にする対象）。
     const currentEntry = {
         start: currentStart,
         end: nextStart,
-        mapName: data.currentMap
+        mapName: data.currentMap,
+        predicted: false
     };
     const nextEntry = {
         start: nextStart,
         end: new Date(nextStart.getTime() + ROTATION_INTERVAL_MS),
-        mapName: data.nextMap
+        mapName: data.nextMap,
+        predicted: false
     };
     const result = [currentEntry, nextEntry];
 
@@ -1039,7 +1045,7 @@ function buildRankedSchedule(data) {
         while (start < horizon) {
             idx = (idx + 1) % RANKED_MAP_CYCLE.length;
             const end = new Date(start.getTime() + ROTATION_INTERVAL_MS);
-            result.push({ start, end, mapName: RANKED_MAP_CYCLE[idx] });
+            result.push({ start, end, mapName: RANKED_MAP_CYCLE[idx], predicted: true });
             start = end;
         }
     }
@@ -1192,11 +1198,13 @@ async function fetchMapData() {
 
         mapData = buildRankedSchedule(effectiveData).sort((a, b) => a.start - b.start);
 
-        // スプリット終了時刻以降に開始する予測エントリは、次シーズンの巡回順が未定のため取り除く
+        // スプリット終了時刻以降に開始する「推測」エントリ(predicted: true)だけを取り除く。
+        // currentEntry/nextEntry(predicted: false)はtas.ggが直接報告する実データなので、
+        // 境界をまたいでいても常に表示する。
         let splitEndTruncated = false;
         if (splitEndCutoff) {
             const beforeLen = mapData.length;
-            mapData = mapData.filter(m => m.start < splitEndCutoff);
+            mapData = mapData.filter(m => !m.predicted || m.start < splitEndCutoff);
             splitEndTruncated = mapData.length < beforeLen;
         }
 
