@@ -1209,7 +1209,7 @@ async function fetchMapData() {
 
         if (cycleMismatch) {
             document.getElementById('errorContainer').innerHTML =
-                `<div class="empty-msg" style="color:#f59e0b;">⚠ data/mapcycle.jsonの巡回設定が現在のマップ名と一致していません。マップ巡回順を更新してください（今は「現在」「次」のみ表示中）。</div>`;
+                `<div class="empty-msg" style="color:#f59e0b;">⚠ シーズン切り替えに伴い、マップ巡回の予測情報を準備中です。しばらくは「現在」「次」のマップのみの表示となります。</div>`;
         }
 
         updateMapFilterOptions();
