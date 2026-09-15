@@ -1201,11 +1201,8 @@ async function fetchMapData() {
         // スプリット終了時刻以降に開始する「推測」エントリ(predicted: true)だけを取り除く。
         // currentEntry/nextEntry(predicted: false)はtas.ggが直接報告する実データなので、
         // 境界をまたいでいても常に表示する。
-        let splitEndTruncated = false;
         if (splitEndCutoff) {
-            const beforeLen = mapData.length;
             mapData = mapData.filter(m => !m.predicted || m.start < splitEndCutoff);
-            splitEndTruncated = mapData.length < beforeLen;
         }
 
         if(mapData.length === 0) throw new Error("データがありません");
@@ -1213,9 +1210,6 @@ async function fetchMapData() {
         if (cycleMismatch) {
             document.getElementById('errorContainer').innerHTML =
                 `<div class="empty-msg" style="color:#f59e0b;">⚠ data/mapcycle.jsonの巡回設定が現在のマップ名と一致していません。マップ巡回順を更新してください（今は「現在」「次」のみ表示中）。</div>`;
-        } else if (splitEndTruncated) {
-            document.getElementById('errorContainer').innerHTML =
-                `<div class="empty-msg" style="color:#f59e0b;">⚠ ランクスプリット終了（${formatDateJP(splitEndCutoff)}）以降は次シーズンのマップ巡回順が未定のため、予測スケジュールを表示していません。</div>`;
         }
 
         updateMapFilterOptions();
