@@ -933,6 +933,8 @@ const mapRotationDataUrl = 'data/maprotation.json';
 // マップによって日本語("ワールズエッジ")のままだったり英語("E-District")のままだったりします。
 // data/maprotation.json の currentMap / nextMap に実際に入っている文字列と
 // 完全一致させてください（一致しない場合は自動で「現在」「次」のみの表示にフォールバックします）。
+// シーズン切り替えで巡回を更新するときは、validUntil(この巡回が有効な期限)も
+// data/splitend.json の splitEndAt に合わせて更新してください（期限以降は予測を表示しません）。
 let RANKED_MAP_CYCLE = ["E-District", "ワールズエッジ", "ストームポイント"];
 // マップローテーションの切り替え間隔（既定: 4時間30分）
 let ROTATION_INTERVAL_MS = 4.5 * 60 * 60 * 1000;
@@ -992,6 +994,11 @@ const mapMetadata = {
     "E-District": { icon: "🏙️", name: "E-ディストリクト" },
     "Inferno": { icon: "🔥", name: "インフェルノ" }
 };
+
+// tas.gg由来のマップ名など外部データをinnerHTMLに埋め込む際のエスケープ
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function getMapMeta(mapName) {
     for (let key in mapMetadata) {
@@ -1145,9 +1152,14 @@ async function fetchMapData() {
 
         // シーズン変更などでマップ巡回順・間隔が変わった場合に追従できるよう、
         // data/mapcycle.json が取得できればそちらの内容で上書きする（失敗時は既存のフォールバック値を使用）
+        let cycleValidUntil = null;
         if (cycleRes && cycleRes.ok) {
             try {
                 const cycleJson = await cycleRes.json();
+                if (cycleJson.validUntil) {
+                    const validUntil = new Date(cycleJson.validUntil);
+                    if (!isNaN(validUntil.getTime())) cycleValidUntil = validUntil;
+                }
                 if (Array.isArray(cycleJson.cycle) && cycleJson.cycle.length >= 2) {
                     RANKED_MAP_CYCLE = cycleJson.cycle;
                 }
@@ -1205,9 +1217,17 @@ async function fetchMapData() {
             mapData = mapData.filter(m => !m.predicted || m.start < splitEndCutoff);
         }
 
+        // tas.ggがスプリット終了時刻を次の値に更新しても、巡回の設定が旧シーズンのままなら
+        // 予測は当たらない。新プールに旧巡回と同じ並びが残ると巡回の不一致でも検出できないため、
+        // data/mapcycle.json の validUntil 以降は同様に予測を取り除く。
+        if (cycleValidUntil) {
+            mapData = mapData.filter(m => !m.predicted || m.start < cycleValidUntil);
+        }
+        const cycleExpired = cycleValidUntil !== null && Date.now() >= cycleValidUntil.getTime();
+
         if(mapData.length === 0) throw new Error("データがありません");
 
-        if (cycleMismatch) {
+        if (cycleMismatch || cycleExpired) {
             document.getElementById('errorContainer').innerHTML =
                 `<div class="empty-msg" style="color:#f59e0b;">⚠ シーズン切り替えに伴い、マップ巡回の予測情報を準備中です。しばらくは「現在」「次」のマップのみの表示となります。</div>`;
         }
@@ -1240,7 +1260,7 @@ async function fetchMapData() {
     } catch(err) {
         document.getElementById('currentMapName').innerText = 'Error';
         document.getElementById('currentCountdown').innerText = '-';
-        document.getElementById('errorContainer').innerHTML = `<div class="empty-msg" style="color:var(--danger);">Error: ${err.message}</div>`;
+        document.getElementById('errorContainer').innerHTML = `<div class="empty-msg" style="color:var(--danger);">Error: ${escapeHtml(err.message)}</div>`;
     }
 }
 
@@ -1254,7 +1274,7 @@ function updateHero() {
     
     if (current) {
         const meta = getMapMeta(current.mapName);
-        document.getElementById('currentMapName').innerHTML = `<span class="card-icon">${meta.icon}</span> ${current.mapName}`;
+        document.getElementById('currentMapName').innerHTML = `<span class="card-icon">${escapeHtml(meta.icon)}</span> ${escapeHtml(current.mapName)}`;
         document.getElementById('currentMapTime').innerText = `${formatTime(current.start)} – ${formatTime(current.end)}`;
         
         const totalMin = (current.end - current.start) / 60000;
@@ -1274,7 +1294,7 @@ function updateHero() {
         const next = mapData.find(m => m.start > now);
         if(next) {
             const meta = getMapMeta(next.mapName);
-            document.getElementById('currentMapName').innerHTML = `<span class="card-icon">${meta.icon}</span> ${next.mapName}`;
+            document.getElementById('currentMapName').innerHTML = `<span class="card-icon">${escapeHtml(meta.icon)}</span> ${escapeHtml(next.mapName)}`;
             document.getElementById('currentMapTime').innerText = `${formatTime(next.start)} – ${formatTime(next.end)}`;
             document.getElementById('currentCountdown').innerHTML = `<span style="opacity: 0.6; font-size: 1.1rem; margin-right: 8px;">⏳</span>まもなく開始`;
         } else {
@@ -1524,10 +1544,10 @@ function renderList(targetDate) {
                     ${timeText}
                 </div>
                 <div class="card-body">
-                    <span class="card-icon">${meta.icon}</span>
+                    <span class="card-icon">${escapeHtml(meta.icon)}</span>
                     <div class="card-content" style="width: 100%;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="card-name">${m.mapName}</span>
+                            <span class="card-name">${escapeHtml(m.mapName)}</span>
                             ${isCurrent ? '<div class="now-badge">NOW</div>' : ''}
                         </div>
                         ${progressHtml}

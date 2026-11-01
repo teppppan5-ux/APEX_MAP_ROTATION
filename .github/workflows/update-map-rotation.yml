@@ -89,8 +89,20 @@ jobs:
           OLD_JSON="$( [ -f data/maprotation.json ] && jq '{currentMap, nextMap}' data/maprotation.json 2>/dev/null || echo '{}' )"
           NEW_COMPARE="$(echo "$NEW_JSON" | jq '{currentMap, nextMap}')"
 
-          if [ "$NEW_COMPARE" != "$OLD_JSON" ]; then
-            echo "$NEW_JSON" | jq --arg fetchedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {fetchedAt: $fetchedAt}' > data/maprotation.json
+          # マップ名が同じまま切り替え時刻だけがズレた場合(シーズン切り替え時など)も検知する。
+          # 残り時間は実際より±1-2分揺れるため、サイトの表示と同じ30分単位に丸めて比較する
+          next_switch_epoch() { echo $(( ( $(date -u -d "$1" +%s) + $2 * 60 + 900 ) / 1800 * 1800 )); }
+          FETCHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          NEW_SWITCH="$(next_switch_epoch "$FETCHED_AT" "$REMAIN_MIN")"
+          OLD_FETCHED_AT="$( [ -f data/maprotation.json ] && jq -r '.fetchedAt // empty' data/maprotation.json 2>/dev/null || true )"
+          OLD_REMAIN_MIN="$( [ -f data/maprotation.json ] && jq -r '.remainingMinutesAtFetch // empty' data/maprotation.json 2>/dev/null || true )"
+          OLD_SWITCH=""
+          if [ -n "$OLD_FETCHED_AT" ] && [ -n "$OLD_REMAIN_MIN" ]; then
+            OLD_SWITCH="$(next_switch_epoch "$OLD_FETCHED_AT" "$OLD_REMAIN_MIN")"
+          fi
+
+          if [ "$NEW_COMPARE" != "$OLD_JSON" ] || [ "$NEW_SWITCH" != "$OLD_SWITCH" ]; then
+            echo "$NEW_JSON" | jq --arg fetchedAt "$FETCHED_AT" '. + {fetchedAt: $fetchedAt}' > data/maprotation.json
             echo "CHANGED=1" >> "$GITHUB_ENV"
           else
             echo "No change in ranked map rotation. Skipping commit."
@@ -154,7 +166,8 @@ jobs:
           fi
 
       - name: Commit and push if changed
-        if: env.CHANGED == '1' || env.SPLIT_CHANGED == '1'
+        # スプリット情報の取得に失敗しても、取得済みのマップ情報はコミットする(ジョブ自体は失敗のまま)
+        if: ${{ !cancelled() && (env.CHANGED == '1' || env.SPLIT_CHANGED == '1') }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

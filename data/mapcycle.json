@@ -1,4 +1,5 @@
 {
   "cycle": ["ワールズエッジ", "オリンパス", "ブロークンムーン"],
-  "rotationMinutes": 270
+  "rotationMinutes": 270,
+  "validUntil": "2026-11-03T17:30:00Z"
 }
