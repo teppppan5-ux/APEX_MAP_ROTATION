@@ -261,34 +261,48 @@
         vertical-align: middle;
     }
 
-    .override-section {
-        margin-top: 16px;
+    .header-actions {
+        position: relative;
+        display: flex;
+        flex-shrink: 0;
+        gap: 8px;
+        margin-left: 12px;
     }
 
     .override-toggle-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid var(--border-dark);
-        color: var(--text-muted);
-        padding: 8px 14px;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        font-family: inherit;
-        cursor: pointer;
-        transition: 0.15s;
+        position: relative;
     }
-    .override-toggle-btn:hover {
-        background: var(--bg-hover);
-        color: var(--text);
+    /* 手動補正中はアイコンに印を付ける */
+    .override-toggle-btn.is-active::after {
+        content: "";
+        position: absolute;
+        top: -3px;
+        right: -3px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #f59e0b;
+        border: 2px solid var(--bg-sub);
     }
 
     .override-panel {
-        margin-top: 14px;
-        padding-top: 14px;
-        border-top: 1px solid var(--border-dark);
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 100;
+        width: min(340px, calc(100vw - 32px));
+        padding: 18px;
+        background: var(--bg);
+        border: 1px solid var(--border-dark);
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+
+    .override-panel-title {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 14px;
     }
 
     .override-field-label {
@@ -823,7 +837,22 @@
             <span style="font-size: 0.5em; color: var(--text-muted); font-weight: 500; margin-left: 8px; vertical-align: middle;">V0.2.0</span>
         </h1>
         <div class="header-actions">
+            <button id="toggleOverrideBtn" class="btn-icon override-toggle-btn" title="マップがズレている場合の手動補正" aria-label="マップがズレている場合の手動補正" aria-expanded="false" aria-controls="overridePanel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></button>
             <button id="refreshBtn" class="btn-icon" title="Reload">↻</button>
+            <div class="override-panel" id="overridePanel" style="display:none;">
+                <div class="override-panel-title">マップがズレている場合の手動補正</div>
+                <label class="override-field-label" for="overrideMapSelect">現在のマップ</label>
+                <select id="overrideMapSelect" class="filter-select" style="margin-bottom:12px;"></select>
+                <label class="override-field-label" for="overrideEndTime">次のマップに切り替わる時刻</label>
+                <div class="override-row">
+                    <input type="time" id="overrideEndTime" class="override-input">
+                </div>
+                <div class="override-actions">
+                    <button id="saveOverrideBtn" class="override-btn-save">この内容で補正する</button>
+                    <button id="clearOverrideBtn" class="override-btn-clear" style="display:none;">解除</button>
+                </div>
+                <div class="override-status" id="overrideStatusMsg" style="display:none;"></div>
+            </div>
         </div>
     </header>
 
@@ -850,23 +879,6 @@
                 </div>
                 <div class="hero-countdown" id="currentCountdown">--</div>
                 <div class="hero-next" id="nextMapInfo">Next: ---</div>
-
-                <div class="override-section">
-                    <button id="toggleOverrideBtn" class="override-toggle-btn">🛠 マップがズレている場合の手動補正</button>
-                    <div class="override-panel" id="overridePanel" style="display:none;">
-                        <label class="override-field-label">現在のマップ</label>
-                        <select id="overrideMapSelect" class="filter-select" style="margin-bottom:12px;"></select>
-                        <label class="override-field-label">次のマップに切り替わる時刻</label>
-                        <div class="override-row">
-                            <input type="time" id="overrideEndTime" class="override-input">
-                        </div>
-                        <div class="override-actions">
-                            <button id="saveOverrideBtn" class="override-btn-save">この内容で補正する</button>
-                            <button id="clearOverrideBtn" class="override-btn-clear" style="display:none;">解除</button>
-                        </div>
-                        <div class="override-status" id="overrideStatusMsg" style="display:none;"></div>
-                    </div>
-                </div>
             </section>
 
             <!-- Filter -->
@@ -1668,6 +1680,8 @@ function refreshOverrideUI() {
     const clearBtn = document.getElementById('clearOverrideBtn');
     const statusMsg = document.getElementById('overrideStatusMsg');
 
+    document.getElementById('toggleOverrideBtn').classList.toggle('is-active', Boolean(override && manualOverrideActive));
+
     if (override && manualOverrideActive) {
         clearBtn.style.display = 'inline-block';
         statusMsg.style.display = 'block';
@@ -1683,11 +1697,26 @@ function refreshOverrideUI() {
     }
 }
 
+function setOverridePanelOpen(open) {
+    document.getElementById('overridePanel').style.display = open ? 'block' : 'none';
+    document.getElementById('toggleOverrideBtn').setAttribute('aria-expanded', String(open));
+    if (open) refreshOverrideUI();
+}
+
 document.getElementById('toggleOverrideBtn').addEventListener('click', () => {
-    const panel = document.getElementById('overridePanel');
-    const isHidden = panel.style.display === 'none';
-    panel.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) refreshOverrideUI();
+    setOverridePanelOpen(document.getElementById('overridePanel').style.display === 'none');
+});
+
+// パネルの外をクリック、またはEscで閉じる
+document.addEventListener('click', (e) => {
+    if (document.getElementById('overridePanel').style.display === 'none') return;
+    if (e.target.closest('#overridePanel, #toggleOverrideBtn')) return;
+    setOverridePanelOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || document.getElementById('overridePanel').style.display === 'none') return;
+    setOverridePanelOpen(false);
+    document.getElementById('toggleOverrideBtn').focus();
 });
 
 document.getElementById('saveOverrideBtn').addEventListener('click', () => {
@@ -1709,11 +1738,13 @@ document.getElementById('saveOverrideBtn').addEventListener('click', () => {
     const totalMin = Math.round((target.getTime() - now.getTime()) / 60000);
 
     saveManualOverride(mapName, totalMin);
+    setOverridePanelOpen(false);
     fetchMapData();
 });
 
 document.getElementById('clearOverrideBtn').addEventListener('click', () => {
     clearManualOverrideStorage();
+    setOverridePanelOpen(false);
     fetchMapData();
 });
 
