@@ -14,15 +14,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
     :root {
-        --bg: #0f172a;          /* slate-900 */
-        --bg-sub: #020617;      /* slate-950 */
-        --bg-hover: #1e293b;    /* slate-800 */
-        --text: #f8fafc;        /* slate-50 */
-        --text-muted: #94a3b8;  /* slate-400 */
-        --border: #1e293b;      /* slate-800 */
-        --border-dark: #334155; /* slate-700 */
-        --accent: #ef4444;      /* red-500 */
-        --danger: #ef4444;      /* red-500 */
+        --bg: #0f172a;
+        --bg-sub: #020617;
+        --bg-hover: #1e293b;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #1e293b;
+        --border-dark: #334155;
+        --accent: #ef4444;
+        --danger: #ef4444;
         --danger-bg: rgba(239, 68, 68, 0.15);
         --font: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     }
@@ -76,7 +76,6 @@
         }
     }
     
-    /* ======== Header ======== */
     .header {
         display: flex;
         align-items: center;
@@ -109,7 +108,6 @@
         background: var(--bg-sub);
     }
 
-    /* ======== Hero (Current Map) ======== */
     .hero {
         position: relative;
         overflow: hidden;
@@ -215,7 +213,6 @@
         line-height: 1.4;
     }
 
-    /* ======== Ranked Split Countdown ======== */
     .split-card {
         background: var(--bg);
         border: 1px solid var(--border);
@@ -247,7 +244,6 @@
         font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
     }
 
-    /* ======== Manual Override (ズレ手動補正) ======== */
     .override-badge {
         font-size: 0.7rem;
         font-weight: 800;
@@ -272,7 +268,6 @@
     .override-toggle-btn {
         position: relative;
     }
-    /* 手動補正中はアイコンに印を付ける */
     .override-toggle-btn.is-active::after {
         content: "";
         position: absolute;
@@ -383,7 +378,6 @@
         line-height: 1.5;
     }
 
-    /* ======== Toolbar (Tabs & Filters) ======== */
     .toolbar {
         position: sticky;
         top: 24px;
@@ -424,7 +418,7 @@
         background: rgba(0, 0, 0, 0.2);
         padding: 4px;
         box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
-        /* Flex box to ensure it doesn't grow indefinitely */
+        /* 幅が際限なく広がらないようにする */
         display: flex;
         min-width: 0;
         max-width: 100%;
@@ -524,7 +518,6 @@
         box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
     }
 
-    /* ======== Timeline List ======== */
     .timeline {
         display: flex;
         flex-direction: column;
@@ -537,7 +530,6 @@
         position: relative;
     }
 
-    /* カスタムスクロールバー */
     .timeline::-webkit-scrollbar {
         width: 8px;
     }
@@ -665,7 +657,6 @@
         text-transform: uppercase;
     }
 
-    /* ======== Utils ======== */
     .empty-msg {
         text-align: center;
         padding: 40px 20px;
@@ -748,7 +739,6 @@
             padding-right: 0;
         }
 
-        /* 日付タブのスワイプ最適化 */
         #scrollLeftBtn, #scrollRightBtn {
             display: none;
         }
@@ -775,7 +765,6 @@
             border-radius: 10px;
         }
 
-        /* タイムラインのカード最適化 */
         .card {
             align-items: flex-start;
             flex-direction: column;
@@ -858,7 +847,6 @@
 
     <div id="errorContainer"></div>
 
-    <!-- Ranked Split Countdown -->
     <section class="split-card" id="splitCountdownCard" style="display:none;">
         <div class="split-card-label">🏆 ランクスプリット終了まで</div>
         <div class="split-card-remaining" id="splitRemaining">--</div>
@@ -866,10 +854,8 @@
     </section>
 
     <div class="main-layout">
-        <!-- Left Column -->
         <div class="col-left">
 
-            <!-- Hero: Current Map -->
             <section class="hero">
                 <div class="hero-label">Now Playing <span id="overrideBadge" class="override-badge" style="display:none;">⚠ 手動補正中</span></div>
                 <div class="hero-title" id="currentMapName">Loading...</div>
@@ -881,7 +867,6 @@
                 <div class="hero-next" id="nextMapInfo">Next: ---</div>
             </section>
 
-            <!-- Filter -->
             <section class="toolbar" style="margin-bottom: 24px; top: 20px;">
                 <div class="toolbar-row">
                     <select id="mapFilter" class="filter-select">
@@ -891,9 +876,7 @@
             </section>
         </div>
 
-        <!-- Right Column -->
         <div class="col-right">
-            <!-- Selected Map Header (Filter Active) -->
             <section class="toolbar" id="filterHeader" style="top: 24px; display: none; margin-bottom: 16px; padding: 12px 20px;">
                 <div style="display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 800; color: var(--text);">
                     <span id="filterHeaderIcon" style="font-size: 1.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></span>
@@ -902,14 +885,12 @@
                 </div>
             </section>
 
-            <!-- Toolbar: Tabs -->
             <section class="toolbar" id="tabsToolbar" style="top: 24px;">
                 <div class="date-tabs-container">
                     <button class="scroll-btn" id="scrollLeftBtn" title="前へ">❮</button>
                     
                     <div class="date-tabs-wrapper">
                         <div class="date-tabs" id="dateTabs">
-                            <!-- Tabs generated by JS -->
                         </div>
                     </div>
                     
@@ -922,9 +903,7 @@
                 </div>
             </section>
 
-            <!-- Timeline List -->
             <section class="timeline" id="resultList">
-                <!-- List generated by JS -->
             </section>
         </div>
     </div>
@@ -933,25 +912,19 @@
 <button id="backToNowBtn" class="floating-btn">↑ Now</button>
 
 <script>
-// twitchIDはブラウザに公開しないため、GitHub Actions (.github/workflows/update-map-rotation.yml)
-// がサーバー側でcmds.tas.ggを叩いてこの静的JSONを定期的に更新している。
+// tas.gg の取得には Twitch ID が必要なため、ブラウザから直接は取得しない。
+// GitHub Actions（.github/workflows/update-map-rotation.yml）が取得して保存した JSON を読み込む
 const mapRotationDataUrl = 'data/maprotation.json';
 
-// ランクマップの巡回順序とローテ間隔は data/mapcycle.json から読み込む。
-// シーズン切り替わりでマッププールや順番、間隔が変わった場合は、
-// このJSファイルを触らずに data/mapcycle.json をGitHub上で直接編集するだけで追従できる。
-// 以下は data/mapcycle.json の取得に失敗した場合のフォールバック値。
-// 注意: tas.ggはlang=jpでもマップ名を全て日本語化するわけではなく、
-// マップによって日本語("ワールズエッジ")のままだったり英語("E-District")のままだったりします。
-// data/maprotation.json の currentMap / nextMap に実際に入っている文字列と
-// 完全一致させてください（一致しない場合は自動で「現在」「次」のみの表示にフォールバックします）。
-// シーズン切り替えで巡回を更新するときは、validUntil(この巡回が有効な期限)も
-// data/splitend.json の splitEndAt に合わせて更新してください（期限以降は予測を表示しません）。
+// ランクマップの巡回順序・ローテーション間隔・有効期限は data/mapcycle.json で設定する
+// - cycle：マップ名は data/maprotation.json の currentMap / nextMap と完全に一致させる
+//   （tas.gg はマップによって日本語名と英語名が混在する）。一致しない場合は「現在」「次」だけを表示する
+// - validUntil：この巡回の有効期限。通常は data/splitend.json の splitEndAt と同じ値にする
+//   期限以降は予測を表示しない
+// 以下は data/mapcycle.json を読み込めなかった場合の既定値
 let RANKED_MAP_CYCLE = ["E-District", "ワールズエッジ", "ストームポイント"];
-// マップローテーションの切り替え間隔（既定: 4時間30分）
 let ROTATION_INTERVAL_MS = 4.5 * 60 * 60 * 1000;
 const mapCycleConfigUrl = 'data/mapcycle.json';
-// 何日先まで未来のマップを予測生成するか
 const FUTURE_DAYS = 14;
 
 let mapData = [];
@@ -959,9 +932,6 @@ let selectedDate = new Date();
 let cycleMismatch = false;
 let manualOverrideActive = false;
 
-// ==========================================
-// 手動補正（ローテのズレを一時的に自分で補正する機能）
-// ==========================================
 const MANUAL_OVERRIDE_KEY = 'apexMapRotationManualOverride_v1';
 
 function getManualOverride() {
@@ -983,15 +953,15 @@ function saveManualOverride(currentMap, remainingMinutes) {
             remainingMinutesAtSave: remainingMinutes,
             savedAt: new Date().toISOString()
         }));
-    } catch (e) { /* localStorageが使えない環境では無視 */ }
+    } catch (e) { /* localStorage が使えない環境（プライベートブラウズなど）では補正を保存しない */ }
 }
 
 function clearManualOverrideStorage() {
     try { localStorage.removeItem(MANUAL_OVERRIDE_KEY); } catch (e) {}
 }
 
-// tas.ggのAPIは実際の切り替え時刻から±1-2分ずれて返ってくることがあるため、
-// キリのいい30分単位（xx:00 / xx:30）に丸めて表示のブレをなくす
+// tas.gg の残り時間は実際の切り替え時刻から±1〜2分ずれることがあるため、
+// 30分単位（xx:00 / xx:30）に丸めて表示のぶれをなくす
 function roundToNearest30Min(date) {
     const unit = 30 * 60 * 1000;
     return new Date(Math.round(date.getTime() / unit) * unit);
@@ -1007,7 +977,7 @@ const mapMetadata = {
     "Inferno": { icon: "🔥", name: "インフェルノ" }
 };
 
-// tas.gg由来のマップ名など外部データをinnerHTMLに埋め込む際のエスケープ
+// マップ名は外部（tas.gg）から来るため、innerHTML に入れる前にエスケープする
 function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -1021,20 +991,15 @@ function getMapMeta(mapName) {
     return { icon: "🗺️", name: mapName };
 }
 
-// tas.ggが返す「現在のランクマップ」「残り分数」「次のランクマップ名」から、
-// 4:30固定間隔 + RANKED_MAP_CYCLEを使って未来のスケジュールを生成する
 function buildRankedSchedule(data) {
-    // fetchedAt(取得時刻)を基準に、その時点での残り分数から次マップの開始時刻を逆算する。
-    // ページを開いたタイミングではなく取得時刻を基準にすることで、閲覧時刻に依存しない正確な時刻になる。
+    // 残り分数は取得した時点の値なので、ページを開いた時刻ではなく取得時刻（fetchedAt）を基準にする
     const fetchedAt = new Date(data.fetchedAt);
     const rawNextStart = new Date(fetchedAt.getTime() + data.remainingMinutesAtFetch * 60 * 1000);
     const nextStart = roundToNearest30Min(rawNextStart);
     const currentStart = new Date(nextStart.getTime() - ROTATION_INTERVAL_MS);
 
-    // currentEntry/nextEntryはtas.ggが直接報告してくる実データなので、
-    // シーズン境界をまたいでいても常に正しい（predicted: false）。
-    // これより先はRANKED_MAP_CYCLEが今後も続くという「こちら側の推測」でしかないため、
-    // predicted: true を付けて区別する（スプリット終了以降は非表示にする対象）。
+    // 現在・次のマップは tas.gg の実データ（predicted: false）
+    // それ以降は RANKED_MAP_CYCLE が続くと仮定した予測（predicted: true）で、期限以降は表示しない
     const currentEntry = {
         start: currentStart,
         end: nextStart,
@@ -1076,7 +1041,6 @@ function formatTime(date) {
     return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
-// 分数を「○時間○分」フォーマットに変換する関数
 function formatDuration(minutes) {
     if (minutes <= 0) return "まもなく";
     const h = Math.floor(minutes / 60);
@@ -1086,7 +1050,6 @@ function formatDuration(minutes) {
     return `あと ${m}分`;
 }
 
-// ミリ秒を「○日○時間」フォーマットに変換する関数（ランクスプリット用）
 function formatDaysDuration(ms) {
     if (ms <= 0) return "終了";
     const totalMin = Math.floor(ms / 60000);
@@ -1111,9 +1074,6 @@ function formatDateTimeJST(date) {
     return `終了日時: ${formatDateJP(date)}`;
 }
 
-// ==========================================
-// ランクスプリット終了カウントダウン
-// ==========================================
 const splitEndDataUrl = 'data/splitend.json';
 let splitEndAt = null;
 
@@ -1139,12 +1099,9 @@ function updateSplitCountdown() {
 }
 
 setInterval(updateSplitCountdown, 60000);
-// スプリット終了時刻はほぼ動かないため、マップローテほど高頻度に取得し直す必要はない
+// スプリット終了時刻はほとんど変わらないため、マップ情報ほど頻繁には取得し直さない
 setInterval(fetchSplitEndData, 30 * 60 * 1000);
 
-// ==========================================
-// データ取得と初期化
-// ==========================================
 async function fetchMapData() {
     try {
         document.getElementById('errorContainer').innerHTML = '';
@@ -1162,8 +1119,6 @@ async function fetchMapData() {
             throw new Error("不正なデータ");
         }
 
-        // シーズン変更などでマップ巡回順・間隔が変わった場合に追従できるよう、
-        // data/mapcycle.json が取得できればそちらの内容で上書きする（失敗時は既存のフォールバック値を使用）
         let cycleValidUntil = null;
         if (cycleRes && cycleRes.ok) {
             try {
@@ -1178,10 +1133,10 @@ async function fetchMapData() {
                 if (typeof cycleJson.rotationMinutes === 'number' && cycleJson.rotationMinutes > 0) {
                     ROTATION_INTERVAL_MS = cycleJson.rotationMinutes * 60 * 1000;
                 }
-            } catch (e) { /* 不正なJSONの場合はフォールバック値を使用 */ }
+            } catch (e) { /* 不正なJSONの場合は既定値を使う */ }
         }
 
-        // ランクスプリット終了以降は、次シーズンのマップ巡回順が不明なため予測を打ち切る
+        // ランクスプリット終了以降は次シーズンのマップ巡回順が分からないため、予測を打ち切る
         let splitEndCutoff = null;
         if (splitRes && splitRes.ok) {
             try {
@@ -1189,11 +1144,9 @@ async function fetchMapData() {
                 if (splitJson && splitJson.splitEndAt) {
                     splitEndCutoff = new Date(splitJson.splitEndAt);
                 }
-            } catch (e) { /* 取得失敗時は制限なしで続行 */ }
+            } catch (e) { /* 取得に失敗した場合は打ち切らずに続ける */ }
         }
 
-        // 手動補正が保存されていて、かつまだその予測時刻(次のマップ開始)を過ぎていなければ
-        // 自動取得データの代わりにそちらを基準にスケジュールを組み立てる
         let effectiveData = json;
         manualOverrideActive = false;
         const override = getManualOverride();
@@ -1213,7 +1166,7 @@ async function fetchMapData() {
                 };
                 manualOverrideActive = true;
             } else {
-                // 予測時刻を過ぎていたら補正は役目を終えたとみなし、自動データに戻す
+                // 補正は指定した切り替え時刻までの一時的なものなので、過ぎたら解除して自動取得したデータに戻す
                 clearManualOverrideStorage();
             }
         }
@@ -1222,16 +1175,14 @@ async function fetchMapData() {
 
         mapData = buildRankedSchedule(effectiveData).sort((a, b) => a.start - b.start);
 
-        // スプリット終了時刻以降に開始する「推測」エントリ(predicted: true)だけを取り除く。
-        // currentEntry/nextEntry(predicted: false)はtas.ggが直接報告する実データなので、
-        // 境界をまたいでいても常に表示する。
+        // 現在・次のマップ（predicted: false）は実データなので、スプリット終了をまたいでも表示する。
+        // 外すのは、次シーズンの巡回が分からない予測（predicted: true）だけ
         if (splitEndCutoff) {
             mapData = mapData.filter(m => !m.predicted || m.start < splitEndCutoff);
         }
 
-        // tas.ggがスプリット終了時刻を次の値に更新しても、巡回の設定が旧シーズンのままなら
-        // 予測は当たらない。新プールに旧巡回と同じ並びが残ると巡回の不一致でも検出できないため、
-        // data/mapcycle.json の validUntil 以降は同様に予測を取り除く。
+        // 巡回設定の有効期限（validUntil）以降の予測も外す。スプリット終了時刻が次のスプリットのものに
+        // 更新された後も、古い巡回のまま予測を出さないようにするため
         if (cycleValidUntil) {
             mapData = mapData.filter(m => !m.predicted || m.start < cycleValidUntil);
         }
@@ -1250,7 +1201,7 @@ async function fetchMapData() {
         const maxDate = mapData[mapData.length - 1].start;
         const datePicker = document.getElementById('datePicker');
         
-        // input=date はローカルタイム YYYY-MM-DD が必要
+        // toISOString() は UTC になるため、タイムゾーンの差をずらしてローカル日付の YYYY-MM-DD を作る
         const toLocalISODate = (d) => {
             const tzOffset = d.getTimezoneOffset() * 60000;
             return new Date(d.getTime() - tzOffset).toISOString().split('T')[0];
@@ -1264,8 +1215,8 @@ async function fetchMapData() {
         renderList(selectedDate);
         
         setTimeout(() => {
-            window.scrollTo(0, 0); // ページ全体はトップにフォーカス
-            scrollToCurrent();     // リスト内は現在のマップへスクロール
+            window.scrollTo(0, 0);
+            scrollToCurrent();
             if (typeof checkNowBtnVisibility === 'function') checkNowBtnVisibility();
         }, 300);
 
@@ -1276,9 +1227,6 @@ async function fetchMapData() {
     }
 }
 
-// ==========================================
-// Hero (現在) 更新
-// ==========================================
 function updateHero() {
     if(mapData.length === 0) return;
     const now = new Date();
@@ -1323,12 +1271,8 @@ function updateHero() {
     }
 }
 setInterval(updateHero, 30000);
-// APIの最新状況(current/next)と同期を取るため、定期的に再取得する
 setInterval(fetchMapData, 10 * 60 * 1000);
 
-// ==========================================
-// Tabs & Calendar
-// ==========================================
 function renderTabs() {
     const container = document.getElementById('dateTabs');
     const tabsToolbar = document.getElementById('tabsToolbar');
@@ -1432,7 +1376,6 @@ function renderTabs() {
     });
 }
 
-// タブのスクロールボタン
 document.getElementById('scrollLeftBtn').addEventListener('click', () => {
     document.getElementById('dateTabs').scrollBy({ left: -200, behavior: 'smooth' });
 });
@@ -1440,7 +1383,6 @@ document.getElementById('scrollRightBtn').addEventListener('click', () => {
     document.getElementById('dateTabs').scrollBy({ left: 200, behavior: 'smooth' });
 });
 
-// カレンダー変更イベント
 document.getElementById('datePicker').addEventListener('change', (e) => {
     if(!e.target.value) return;
     const [y, m, d] = e.target.value.split('-');
@@ -1456,9 +1398,6 @@ document.getElementById('datePicker').addEventListener('change', (e) => {
     }, 50);
 });
 
-// ==========================================
-// Timeline List
-// ==========================================
 function renderList(targetDate) {
     const container = document.getElementById('resultList');
     container.innerHTML = '';
@@ -1475,10 +1414,8 @@ function renderList(targetDate) {
         const matchFilter = !filterVal || mapNameLower.includes(filterVal);
         
         if (isFiltering) {
-            // フィルタ有効な場合は、日付に関係なく現在時刻以降の予定をすべて表示
             return matchFilter && m.end >= now;
         } else {
-            // 通常時は選択した日付に一部でも重なっていれば表示
             const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
             const targetEnd = targetStart + 24 * 60 * 60 * 1000;
             return m.start.getTime() < targetEnd && m.end.getTime() > targetStart;
@@ -1528,7 +1465,6 @@ function renderList(targetDate) {
         let timeText = `${formatTime(m.start)} – ${formatTime(m.end)}`;
 
         if (isFiltering) {
-            // フィルタ時はマップ名等を省き、スケジュール表のようにシンプルにする
             const mMonth = m.start.getMonth() + 1;
             const mDate = m.start.getDate();
             const dayNames = ['日','月','火','水','木','金','土'];
@@ -1573,9 +1509,6 @@ function renderList(targetDate) {
     });
 }
 
-// ==========================================
-// Utils
-// ==========================================
 function getMapBrandColor(mapName, isGradient=false) {
     let color = "";
     if (mapName.includes("World's Edge") || mapName.includes("ワールズエッジ")) color = "rgba(255, 69, 0, 0.15)";
@@ -1594,7 +1527,6 @@ function scrollToCurrent() {
     const el = document.querySelector('.card.is-current');
     const container = document.getElementById('resultList');
     if(el && container) {
-        // リスト枠内でのスクロールに変更
         const y = el.offsetTop - 20;
         container.scrollTo({ top: y, behavior: 'smooth' });
     }
@@ -1629,21 +1561,17 @@ function checkNowBtnVisibility() {
     let needsNowBtn = false;
 
     if (filterVal !== '' || isNotToday) {
-        // フィルターがかかっているか、今日以外を見ている場合は常に表示
         needsNowBtn = true;
     } else {
-        // 今日＆フィルターなしの場合、現在のカードが見えているか判定
         const currentCard = document.querySelector('.card.is-current');
         if (currentCard && list) {
             const listScroll = list.scrollTop;
             const cardTop = currentCard.offsetTop;
             const listHeight = list.clientHeight;
-            // リストの表示領域から外れている場合 (上下のバッファを取る)
             if (cardTop < listScroll - 100 || cardTop > listScroll + listHeight - 50) {
                 needsNowBtn = true;
             }
         }
-        // 画面全体が下にスクロールされている場合
         if (window.scrollY > 400) {
             needsNowBtn = true;
         }
@@ -1656,9 +1584,6 @@ function checkNowBtnVisibility() {
     }
 }
 
-// ==========================================
-// 手動補正パネルのUI制御
-// ==========================================
 function populateOverrideMapSelect() {
     const select = document.getElementById('overrideMapSelect');
     if (!select) return;
@@ -1707,7 +1632,6 @@ document.getElementById('toggleOverrideBtn').addEventListener('click', () => {
     setOverridePanelOpen(document.getElementById('overridePanel').style.display === 'none');
 });
 
-// パネルの外をクリック、またはEscで閉じる
 document.addEventListener('click', (e) => {
     if (document.getElementById('overridePanel').style.display === 'none') return;
     if (e.target.closest('#overridePanel, #toggleOverrideBtn')) return;
@@ -1721,7 +1645,7 @@ document.addEventListener('keydown', (e) => {
 
 document.getElementById('saveOverrideBtn').addEventListener('click', () => {
     const mapName = document.getElementById('overrideMapSelect').value;
-    const timeVal = document.getElementById('overrideEndTime').value; // "HH:MM"
+    const timeVal = document.getElementById('overrideEndTime').value;
 
     if (!mapName || !timeVal) {
         alert('現在のマップと、次のマップに切り替わる時刻を入力してください。');
@@ -1731,7 +1655,7 @@ document.getElementById('saveOverrideBtn').addEventListener('click', () => {
     const [hh, mm] = timeVal.split(':').map(Number);
     const now = new Date();
     let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-    // 指定時刻が現在時刻以前なら「翌日のその時刻」とみなす（日付をまたぐケース）
+    // 指定時刻が現在時刻以前なら、翌日のその時刻とみなす（日付をまたぐ場合）
     if (target.getTime() <= now.getTime()) {
         target = new Date(target.getTime() + 24 * 60 * 60 * 1000);
     }
@@ -1763,8 +1687,8 @@ window.addEventListener('scroll', checkNowBtnVisibility);
 document.getElementById('resultList').addEventListener('scroll', checkNowBtnVisibility);
 
 document.getElementById('backToNowBtn').addEventListener('click', () => {
-    document.getElementById('mapFilter').value = ''; // フィルターをリセット
-    selectedDate = new Date(); // 日付を今日にリセット
+    document.getElementById('mapFilter').value = '';
+    selectedDate = new Date();
     renderTabs();
     renderList(selectedDate);
     setTimeout(() => {
