@@ -56,12 +56,26 @@ jobs:
               break
             fi
 
+            # マップ切り替え直後の数十秒ほど、tas.ggは「- 次のマップ: X」を省いた応答を返すことがある
+            # (例: "BRランク: ストームポイント (残り4 時間, 29 分) | (- 運営元：TAS.gg -)")
+            NEXT_ONLY_MISSING=0
+            if [ -n "$CURRENT_MAP" ] && [ -n "$REMAIN_RAW" ] && [ -z "$NEXT_MAP" ]; then
+              NEXT_ONLY_MISSING=1
+            fi
+
             CURRENT_MAP=""; NEXT_MAP=""; REMAIN_RAW=""
             if [ "$attempt" -eq 1 ]; then
               echo "::warning::Attempt 1 failed, retrying in 10s..."
               sleep 10
             fi
           done
+
+          # 再取得でも次マップだけが欠けていた場合は失敗扱いにせず、今回の更新を見送る。
+          # サイト側は前回データの時刻から切り替えを計算しているので、10分後の次回実行で正しいデータが入れば足りる
+          if [ -z "$CURRENT_MAP" ] && [ "${NEXT_ONLY_MISSING:-0}" = "1" ]; then
+            echo "::warning::tas.gg response has no next map yet (usually right after a map switch). Skipping this update: $TEXT"
+            exit 0
+          fi
 
           if [ -z "$CURRENT_MAP" ] || [ -z "$NEXT_MAP" ] || [ -z "$REMAIN_RAW" ]; then
             echo "::error::Failed to fetch/parse tas.gg response after retry: ${TEXT:-<no response>}"
