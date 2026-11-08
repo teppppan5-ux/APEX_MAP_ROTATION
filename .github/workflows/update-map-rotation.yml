@@ -32,6 +32,16 @@ jobs:
             exit 1
           fi
 
+          # 前回保存したデータから、次の切り替え時刻(30分単位に丸めたepoch秒)を求める。
+          # 残り時間は実際より±1-2分揺れるため、サイトの表示と同じ30分単位に丸める
+          next_switch_epoch() { echo $(( ( $(date -u -d "$1" +%s) + $2 * 60 + 900 ) / 1800 * 1800 )); }
+          OLD_FETCHED_AT="$( [ -f data/maprotation.json ] && jq -r '.fetchedAt // empty' data/maprotation.json 2>/dev/null || true )"
+          OLD_REMAIN_MIN="$( [ -f data/maprotation.json ] && jq -r '.remainingMinutesAtFetch // empty' data/maprotation.json 2>/dev/null || true )"
+          OLD_SWITCH=""
+          if [ -n "$OLD_FETCHED_AT" ] && [ -n "$OLD_REMAIN_MIN" ]; then
+            OLD_SWITCH="$(next_switch_epoch "$OLD_FETCHED_AT" "$OLD_REMAIN_MIN")"
+          fi
+
           # tas.gg側の一時的な通信エラー(curl失敗)や、応答内容の揺れ(次マップ情報の欠落など)に
           # 備えて、最大2回(初回+1リトライ)まで取得・解析を試みる
           CURRENT_MAP=""
@@ -70,11 +80,16 @@ jobs:
             fi
           done
 
-          # 再取得でも次マップだけが欠けていた場合は失敗扱いにせず、今回の更新を見送る。
-          # サイト側は前回データの時刻から切り替えを計算しているので、10分後の次回実行で正しいデータが入れば足りる
-          if [ -z "$CURRENT_MAP" ] && [ "${NEXT_ONLY_MISSING:-0}" = "1" ]; then
-            echo "::warning::tas.gg response has no next map yet (usually right after a map switch). Skipping this update: $TEXT"
-            exit 0
+          # 再取得でも次マップだけが欠けていた場合、切り替え直後(前回データの切り替え時刻の5分前〜25分後)に限り
+          # 失敗扱いにせず、今回の更新を見送る。サイト側は前回データの時刻から切り替えを計算しているので、
+          # 次回以降の実行で正しいデータが入れば足りる。
+          # それ以外の時間帯に欠けている場合(tas側の書式変更など)は、データが止まったことに気づけるよう失敗にする
+          if [ -z "$CURRENT_MAP" ] && [ "${NEXT_ONLY_MISSING:-0}" = "1" ] && [ -n "$OLD_SWITCH" ]; then
+            SINCE_SWITCH=$(( $(date -u +%s) - OLD_SWITCH ))
+            if [ "$SINCE_SWITCH" -ge -300 ] && [ "$SINCE_SWITCH" -le 1500 ]; then
+              echo "::warning::tas.gg response has no next map yet ($(( SINCE_SWITCH / 60 )) min after the expected map switch). Skipping this update: $TEXT"
+              exit 0
+            fi
           fi
 
           if [ -z "$CURRENT_MAP" ] || [ -z "$NEXT_MAP" ] || [ -z "$REMAIN_RAW" ]; then
@@ -103,17 +118,9 @@ jobs:
           OLD_JSON="$( [ -f data/maprotation.json ] && jq '{currentMap, nextMap}' data/maprotation.json 2>/dev/null || echo '{}' )"
           NEW_COMPARE="$(echo "$NEW_JSON" | jq '{currentMap, nextMap}')"
 
-          # マップ名が同じまま切り替え時刻だけがズレた場合(シーズン切り替え時など)も検知する。
-          # 残り時間は実際より±1-2分揺れるため、サイトの表示と同じ30分単位に丸めて比較する
-          next_switch_epoch() { echo $(( ( $(date -u -d "$1" +%s) + $2 * 60 + 900 ) / 1800 * 1800 )); }
+          # マップ名が同じまま切り替え時刻だけがズレた場合(シーズン切り替え時など)も検知する
           FETCHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           NEW_SWITCH="$(next_switch_epoch "$FETCHED_AT" "$REMAIN_MIN")"
-          OLD_FETCHED_AT="$( [ -f data/maprotation.json ] && jq -r '.fetchedAt // empty' data/maprotation.json 2>/dev/null || true )"
-          OLD_REMAIN_MIN="$( [ -f data/maprotation.json ] && jq -r '.remainingMinutesAtFetch // empty' data/maprotation.json 2>/dev/null || true )"
-          OLD_SWITCH=""
-          if [ -n "$OLD_FETCHED_AT" ] && [ -n "$OLD_REMAIN_MIN" ]; then
-            OLD_SWITCH="$(next_switch_epoch "$OLD_FETCHED_AT" "$OLD_REMAIN_MIN")"
-          fi
 
           if [ "$NEW_COMPARE" != "$OLD_JSON" ] || [ "$NEW_SWITCH" != "$OLD_SWITCH" ]; then
             echo "$NEW_JSON" | jq --arg fetchedAt "$FETCHED_AT" '. + {fetchedAt: $fetchedAt}' > data/maprotation.json
